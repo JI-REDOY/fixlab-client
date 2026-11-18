@@ -22,24 +22,34 @@ export default function SignInPage() {
       password: formData.password,
     });
 
-    setLoading(false);
-
     if (error) {
       toast.error(error.message || "Invalid credentials");
-    } else {
+      setLoading(false);
+      return;
+    }
+
+    try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/auth/jwt`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: formData.email }),
       });
+
+      if (!res.ok) throw new Error("Token fetch failed");
+
       const tokenData = await res.json();
-      
       if (tokenData.token) {
         localStorage.setItem("fixlab_token", tokenData.token);
         toast.success("Welcome back!");
         const role = data?.user?.role || 'customer';
         router.push(`/dashboard/${role}`);
       }
+    } catch (err) {
+      toast.error("Signed in, but failed to fetch session token.");
+      const role = data?.user?.role || 'customer';
+      router.push(`/dashboard/${role}`);
+    } finally {
+      setLoading(false);
     }
   };
 

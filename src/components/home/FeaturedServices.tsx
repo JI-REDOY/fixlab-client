@@ -3,12 +3,12 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
 const dummyServices = [
-  { _id: "1", title: "iPhone Screen Replacement", category: "Smartphone", image: "https://images.unsplash.com/photo-1595152772835-219674b2a8a6?q=80&w=800", basePrice: 49, serviceMode: "Home Visit", serviceArea: "Dhanmondi, Dhaka", technicianName: "Rahim Uddin" },
-  { _id: "2", title: "MacBook Pro Battery Repair", category: "Laptop & PC", image: "https://images.unsplash.com/photo-1581092160562-40aa08e78837?q=80&w=800", basePrice: 89, serviceMode: "Shop Drop-off", serviceArea: "Mirpur, Dhaka", technicianName: "Karim Ahmed" },
-  { _id: "3", title: "AC Servicing & Gas Refill", category: "AC", image: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=800", basePrice: 35, serviceMode: "Home Visit", serviceArea: "Uttara, Dhaka", technicianName: "Rahim Uddin" },
-  { _id: "4", title: "Refrigerator Cooling Issue", category: "Refrigerator", image: "https://images.unsplash.com/photo-1584568694244-14fbdf83bd30?q=80&w=800", basePrice: 55, serviceMode: "Home Visit", serviceArea: "Gulshan, Dhaka", technicianName: "Karim Ahmed" },
-  { _id: "5", title: "Washing Machine Motor Fix", category: "Washing Machine", image: "https://images.unsplash.com/photo-1626806819282-2c1dc01a5e0c?q=80&w=800", basePrice: 40, serviceMode: "Shop Drop-off", serviceArea: "Banani, Dhaka", technicianName: "Jamil Khan" },
-  { _id: "6", title: "Smart TV Screen Repair", category: "TV", image: "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?q=80&w=800", basePrice: 75, serviceMode: "Home Visit", serviceArea: "Mohakhali, Dhaka", technicianName: "Rahim Uddin" },
+  { _id: "1", title: "iPhone Screen Replacement", category: "Smartphone", image: "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?q=80&w=800&auto=format&fit=crop", basePrice: 49, serviceMode: "Home Visit", serviceArea: "Dhanmondi, Dhaka", technicianName: "Rahim Uddin" },
+  { _id: "2", title: "MacBook Pro Battery Repair", category: "Laptop & PC", image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?q=80&w=800&auto=format&fit=crop", basePrice: 89, serviceMode: "Shop Drop-off", serviceArea: "Mirpur, Dhaka", technicianName: "Karim Ahmed" },
+  { _id: "3", title: "AC Servicing & Gas Refill", category: "AC", image: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=800&auto=format&fit=crop", basePrice: 35, serviceMode: "Home Visit", serviceArea: "Uttara, Dhaka", technicianName: "Rahim Uddin" },
+  { _id: "4", title: "Refrigerator Cooling Issue", category: "Refrigerator", image: "https://images.unsplash.com/photo-1584568694244-14fbdf83bd30?q=80&w=800&auto=format&fit=crop", basePrice: 55, serviceMode: "Home Visit", serviceArea: "Gulshan, Dhaka", technicianName: "Karim Ahmed" },
+  { _id: "5", title: "Washing Machine Motor Fix", category: "Washing Machine", image: "https://images.unsplash.com/photo-1626806819282-2c1dc01a5e0c?q=80&w=800&auto=format&fit=crop", basePrice: 40, serviceMode: "Shop Drop-off", serviceArea: "Banani, Dhaka", technicianName: "Jamil Khan" },
+  { _id: "6", title: "Smart TV Screen Repair", category: "TV", image: "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?q=80&w=800&auto=format&fit=crop", basePrice: 75, serviceMode: "Home Visit", serviceArea: "Mohakhali, Dhaka", technicianName: "Rahim Uddin" },
 ];
 
 export default function FeaturedServices() {

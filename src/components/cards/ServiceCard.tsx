@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowUpRight, Clock, MapPin, Wrench } from "lucide-react";
+import { ArrowUpRight, MapPin, Wrench } from "lucide-react";
 
 interface ServiceCardProps {
   service: {
@@ -24,6 +24,7 @@ export default function ServiceCard({ service }: ServiceCardProps) {
           src={service.image || "https://images.unsplash.com/photo-1581092921461-7031e4bf0e1a?q=80&w=800&auto=format&fit=crop"}
           alt={service.title}
           fill
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           className="object-cover transition-transform duration-500 group-hover:scale-105"
         />
         <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-fixlab-green uppercase tracking-wide">

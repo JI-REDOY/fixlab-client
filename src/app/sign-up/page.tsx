@@ -46,21 +46,32 @@ export default function SignUpPage() {
       callbackURL: `/dashboard/${formData.role}`,
     });
 
-    setLoading(false);
-
     if (error) {
       toast.error(error.message || "Something went wrong");
-    } else {
-      await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/auth/jwt`, {
+      setLoading(false);
+      return;
+    }
+
+    // JWT Fetch with Error Handling
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/auth/jwt`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: formData.email }),
-      }).then(res => res.json()).then(data => {
-        if (data.token) localStorage.setItem("fixlab_token", data.token);
       });
-
+      
+      if (!res.ok) throw new Error("Failed to generate token");
+      
+      const data = await res.json();
+      if (data.token) localStorage.setItem("fixlab_token", data.token);
+      
       toast.success("Account created successfully!");
       router.push(`/dashboard/${formData.role}`);
+    } catch (err) {
+      toast.error("Account created, but failed to generate session token. Please sign in again.");
+      router.push("/sign-in");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -80,6 +91,7 @@ export default function SignUpPage() {
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             error={errors.name}
+            className="bg-white" // হলুদ ব্যাকগ্রাউন্ড ফিক্স
           />
           <Input 
             label="Email" 
@@ -88,6 +100,7 @@ export default function SignUpPage() {
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             error={errors.email}
+            className="bg-white" // হলুদ ব্যাকগ্রাউন্ড ফিক্স
           />
           <Input 
             label="Password" 
@@ -96,16 +109,17 @@ export default function SignUpPage() {
             value={formData.password}
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             error={errors.password}
+            className="bg-white" // হলুদ ব্যাকগ্রাউন্ড ফিক্স
           />
 
           <div className="flex flex-col gap-2 mt-2">
             <label className="text-sm font-medium text-fixlab-charcoal ml-1">Select Role</label>
             <div className="flex gap-4">
-              <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-2xl cursor-pointer transition-all neumorphic-input ${formData.role === 'customer' ? 'border-fixlab-green bg-fixlab-mint/10' : ''}`}>
+              <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-2xl cursor-pointer transition-all border-2 ${formData.role === 'customer' ? 'border-fixlab-green bg-fixlab-mint/10' : 'border-transparent neumorphic-input'}`}>
                 <input type="radio" name="role" value="customer" checked={formData.role === 'customer'} onChange={() => setFormData({ ...formData, role: 'customer' })} className="hidden" />
                 <span className="text-sm font-semibold">Customer</span>
               </label>
-              <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-2xl cursor-pointer transition-all neumorphic-input ${formData.role === 'technician' ? 'border-fixlab-green bg-fixlab-mint/10' : ''}`}>
+              <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-2xl cursor-pointer transition-all border-2 ${formData.role === 'technician' ? 'border-fixlab-green bg-fixlab-mint/10' : 'border-transparent neumorphic-input'}`}>
                 <input type="radio" name="role" value="technician" checked={formData.role === 'technician'} onChange={() => setFormData({ ...formData, role: 'technician' })} className="hidden" />
                 <span className="text-sm font-semibold">Technician</span>
               </label>
