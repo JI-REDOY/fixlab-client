@@ -27,7 +27,6 @@ export default function SignInPage() {
     if (error) {
       toast.error(error.message || "Invalid credentials");
     } else {
-      // Custom JWT Generation
       const res = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/auth/jwt`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -38,8 +37,6 @@ export default function SignInPage() {
       if (tokenData.token) {
         localStorage.setItem("fixlab_token", tokenData.token);
         toast.success("Welcome back!");
-        
-        // Role based redirect
         const role = data?.user?.role || 'customer';
         router.push(`/dashboard/${role}`);
       }
@@ -47,12 +44,12 @@ export default function SignInPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-[url('/bg-pattern.png')] bg-cover">
-      <div className="glass-card p-8 rounded-3xl w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-fixlab-cream">
+      <div className="bg-white/80 backdrop-blur-xl p-8 sm:p-10 rounded-[32px] w-full max-w-md shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-white">
         <div className="flex flex-col items-center mb-8">
-          <Image src="/fixlab-icon.png" alt="FixLab" width={80} height={80} className="mb-4 rounded-2xl" />
+          <Image src="/fixlab-icon.png" alt="FixLab" width={80} height={80} className="mb-4 rounded-2xl shadow-lg" />
           <h1 className="text-2xl font-bold text-fixlab-green">Welcome Back</h1>
-          <p className="text-sm text-fixlab-gray mt-1">Sign in to your FixLab account</p>
+          <p className="text-sm text-fixlab-gray mt-1">Sign in to continue your journey</p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -74,7 +71,7 @@ export default function SignInPage() {
           <button 
             type="submit" 
             disabled={loading}
-            className="w-full mt-4 py-3.5 bg-fixlab-green text-white rounded-xl font-bold hover:bg-opacity-90 transition-all shadow-lg disabled:opacity-70"
+            className="w-full mt-6 py-3.5 bg-fixlab-green text-white rounded-2xl font-bold hover:bg-opacity-90 transition-all shadow-lg shadow-fixlab-green/30 disabled:opacity-70"
           >
             {loading ? "Signing In..." : "Sign In"}
           </button>

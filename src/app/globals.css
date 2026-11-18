@@ -7,7 +7,7 @@
   --color-fixlab-charcoal: #1E1E1E; /* Dark Text */
   --color-fixlab-gray: #6B7280;
   
-  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
 }
 
 @layer base {
@@ -20,10 +20,9 @@
 
 /* Premium Glassmorphism Utility */
 .glass-nav {
-  background: rgba(248, 249, 250, 0.7);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .glass-card {
@@ -31,4 +30,21 @@
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.8);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
+}
+
+/* Neumorphic Input */
+.neumorphic-input {
+  background: #F1F3F5;
+  box-shadow: inset 4px 4px 8px rgba(0, 0, 0, 0.05), 
+              inset -4px -4px 8px rgba(255, 255, 255, 1);
+  border: 1px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.neumorphic-input:focus {
+  background: #F8F9FA;
+  box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.05), 
+              inset -2px -2px 5px rgba(255, 255, 255, 1),
+              0 0 0 2px rgba(26, 67, 42, 0.2); 
+  outline: none;
 }
