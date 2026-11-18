@@ -2,31 +2,47 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { useState } from "react";
-
-const initialServices = [
-  { _id: "1", title: "iPhone Screen Replacement", category: "Smartphone", image: "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?q=80&w=200", basePrice: 49, status: "approved", isAvailable: true },
-  { _id: "2", title: "MacBook Pro Battery Repair", category: "Laptop & PC", image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?q=80&w=200", basePrice: 89, status: "pending", isAvailable: true },
-];
+import { useState, useEffect } from "react";
+import { fetchApi } from "@/lib/api";
 
 export default function MyServicesPage() {
-  const [services, setServices] = useState(initialServices);
+  const [services, setServices] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleDelete = (id: string) => {
-    if (confirm("Are you sure you want to delete this service?")) {
+  useEffect(() => {
+    fetchApi("/api/services/technician/my-services")
+      .then((data) => setServices(data))
+      .catch((err) => toast.error(err.message))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this service?")) return;
+    try {
+      await fetchApi(`/api/services/${id}`, { method: "DELETE" });
       setServices(services.filter((s) => s._id !== id));
-      toast.success("Service deleted successfully");
+      toast.success("Service deleted");
+    } catch (err: any) {
+      toast.error(err.message);
     }
   };
 
-  const toggleAvailability = (id: string) => {
-    setServices(services.map((s) => 
-      s._id === id ? { ...s, isAvailable: !s.isAvailable } : s
-    ));
-    toast.success("Availability updated");
+  const toggleAvailability = async (id: string, currentStatus: boolean) => {
+    try {
+      await fetchApi(`/api/services/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ isAvailable: !currentStatus }),
+      });
+      setServices(services.map((s) => s._id === id ? { ...s, isAvailable: !currentStatus, approvalStatus: "pending" } : s));
+      toast.success("Availability updated (Needs re-approval)");
+    } catch (err: any) {
+      toast.error(err.message);
+    }
   };
+
+  if (loading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-fixlab-green" size={40} /></div>;
 
   return (
     <div className="space-y-6">
@@ -53,6 +69,9 @@ export default function MyServicesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
+              {services.length === 0 && (
+                <tr><td colSpan={5} className="text-center py-10 text-fixlab-gray">No services found. Add one!</td></tr>
+              )}
               {services.map((service) => (
                 <tr key={service._id} className="hover:bg-gray-50/50">
                   <td className="px-6 py-4">
@@ -69,15 +88,15 @@ export default function MyServicesPage() {
                   <td className="px-6 py-4 text-sm font-bold text-fixlab-green">${service.basePrice}</td>
                   <td className="px-6 py-4">
                     <span className={`px-3 py-1 text-xs font-bold rounded-full capitalize ${
-                      service.status === "approved" ? "bg-green-100 text-green-700" :
-                      service.status === "pending" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"
+                      service.approvalStatus === "approved" ? "bg-green-100 text-green-700" :
+                      service.approvalStatus === "pending" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"
                     }`}>
-                      {service.status}
+                      {service.approvalStatus}
                     </span>
                   </td>
                   <td className="px-6 py-4">
                     <button 
-                      onClick={() => toggleAvailability(service._id)}
+                      onClick={() => toggleAvailability(service._id, service.isAvailable)}
                       className={`w-10 h-6 rounded-full relative transition-colors ${service.isAvailable ? 'bg-fixlab-green' : 'bg-gray-200'}`}
                     >
                       <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all ${service.isAvailable ? 'left-5' : 'left-1'}`} />

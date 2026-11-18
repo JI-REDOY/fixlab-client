@@ -4,12 +4,16 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
-import { UploadCloud } from "lucide-react";
+import { UploadCloud, Loader2 } from "lucide-react";
+import { fetchApi } from "@/lib/api";
+
+const IMGBB_API_KEY = process.env.NEXT_PUBLIC_IMGBB_API_KEY; // .env.local এ যোগ করুন
 
 export default function AddServicePage() {
   const router = useRouter();
   const { data: session } = authClient.useSession();
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: "",
@@ -22,26 +26,55 @@ export default function AddServicePage() {
     image: "",
   });
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setImagePreview(reader.result as string);
-      reader.readAsDataURL(file);
-      // TODO: ImgBB API Integration
-      setFormData({ ...formData, image: "https://images.unsplash.com/photo-1581092921461-7031e4bf0e1a?q=80&w=800" });
+    if (!file) return;
+
+    setUploading(true);
+    const reader = new FileReader();
+    reader.onloadend = () => setImagePreview(reader.result as string);
+    reader.readAsDataURL(file);
+
+    // ImgBB Upload
+    const imgData = new FormData();
+    imgData.append("image", file);
+
+    try {
+      const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+        method: "POST",
+        body: imgData,
+      });
+      const data = await res.json();
+      if (data.success) {
+        setFormData({ ...formData, image: data.data.url });
+        toast.success("Image uploaded!");
+      } else {
+        toast.error("Image upload failed");
+      }
+    } catch (err) {
+      toast.error("Image upload failed");
+    } finally {
+      setUploading(false);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.image) return toast.error("Please upload an image");
+    
     setLoading(true);
-    // TODO: API call to save service
-    setTimeout(() => {
-      setLoading(false);
-      toast.success("Service added successfully! Waiting for admin approval.");
+    try {
+      await fetchApi("/api/services", {
+        method: "POST",
+        body: JSON.stringify({ ...formData, basePrice: Number(formData.basePrice) }),
+      });
+      toast.success("Service added! Waiting for admin approval.");
       router.push("/dashboard/technician/my-services");
-    }, 1500);
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -58,7 +91,9 @@ export default function AddServicePage() {
           <label className="text-sm font-bold text-fixlab-charcoal mb-2 block">Service Image</label>
           <div className="border-2 border-dashed border-gray-300 rounded-2xl p-8 flex flex-col items-center justify-center text-center hover:bg-gray-50 transition-colors relative cursor-pointer">
             <input type="file" accept="image/*" onChange={handleImageUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
-            {imagePreview ? (
+            {uploading ? (
+              <Loader2 className="animate-spin text-fixlab-green" size={32} />
+            ) : imagePreview ? (
               <img src={imagePreview} alt="Preview" className="h-32 object-contain rounded-xl" />
             ) : (
               <>
@@ -132,7 +167,8 @@ export default function AddServicePage() {
           </div>
         </div>
 
-        <button type="submit" disabled={loading} className="w-full py-4 bg-fixlab-green text-white rounded-xl font-bold hover:bg-opacity-90 transition-all shadow-lg disabled:opacity-70 mt-4">
+        <button type="submit" disabled={loading || uploading} className="w-full py-4 bg-fixlab-green text-white rounded-xl font-bold hover:bg-opacity-90 transition-all shadow-lg disabled:opacity-70 mt-4 flex items-center justify-center gap-2">
+          {loading && <Loader2 className="animate-spin" size={20} />}
           {loading ? "Adding Service..." : "Add Service"}
         </button>
       </form>

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { X } from "lucide-react";
+import { X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
+import { fetchApi } from "@/lib/api"; // API হেল্পার
 
 interface RequestModalProps {
   service: any;
@@ -50,13 +51,29 @@ export default function RequestModal({ service, onClose }: RequestModalProps) {
 
     setLoading(true);
 
-    // এখানে পরে আমরা সার্ভারে ডেটা পাঠাব (API Call)
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      // সার্ভারে ডেটা পাঠানো
+      await fetchApi("/api/bookings", {
+        method: "POST",
+        body: JSON.stringify({
+          serviceId: service._id,
+          customerPhone: formData.phone,
+          address: formData.address,
+          preferredDate: formData.preferredDate,
+          problemDescription: formData.problemDescription,
+        }),
+      });
+
       toast.success("Repair request sent successfully!");
       onClose();
-      // Navigate to my bookings (pore korbo)
-    }, 1500);
+      
+      // My Bookings পেজে রিডাইরেক্ট করা
+      window.location.href = "/dashboard/customer/bookings"; 
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send request");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -140,8 +157,9 @@ export default function RequestModal({ service, onClose }: RequestModalProps) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-4 bg-fixlab-green text-white rounded-xl font-bold hover:bg-opacity-90 transition-all shadow-lg mt-2 disabled:opacity-70"
+            className="w-full py-4 bg-fixlab-green text-white rounded-xl font-bold hover:bg-opacity-90 transition-all shadow-lg mt-2 disabled:opacity-70 flex items-center justify-center gap-2"
           >
+            {loading && <Loader2 className="animate-spin" size={20} />}
             {loading ? "Sending Request..." : "Send Request"}
           </button>
         </form>
