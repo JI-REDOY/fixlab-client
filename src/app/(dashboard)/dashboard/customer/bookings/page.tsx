@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { toast } from "sonner";
-import { Clock, CheckCircle, CreditCard, Loader2, XCircle } from "lucide-react";
+import { CheckCircle, CreditCard, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { fetchApi } from "@/lib/api";
 
@@ -18,6 +18,7 @@ const statusColors: Record<string, string> = {
 export default function MyBookingsPage() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
   const fetchBookings = () => {
     fetchApi("/api/bookings/my")
@@ -42,15 +43,16 @@ export default function MyBookingsPage() {
   };
 
   const handlePayNow = async (bookingId: string) => {
+    setProcessingId(bookingId);
     try {
-      toast.loading("Redirecting to Stripe...", { id: "stripe" });
       const data = await fetchApi("/api/payments/create-checkout-session", {
         method: "POST",
         body: JSON.stringify({ bookingId }),
       });
-      window.location.href = data.url;
+      window.location.href = data.url; // Stripe Checkout এ রিডাইরেক্ট
     } catch (err: any) {
-      toast.error(err.message, { id: "stripe" });
+      toast.error(err.message);
+      setProcessingId(null);
     }
   };
 
@@ -112,8 +114,13 @@ export default function MyBookingsPage() {
                       </button>
                     )}
                     {booking.status === "completed" && booking.paymentStatus === "unpaid" && (
-                      <button onClick={() => handlePayNow(booking._id)} className="px-4 py-2 text-xs font-bold text-white bg-fixlab-green hover:bg-opacity-90 rounded-lg transition-colors flex items-center gap-1 ml-auto">
-                        <CreditCard size={14} /> Pay Now
+                      <button 
+                        onClick={() => handlePayNow(booking._id)} 
+                        disabled={processingId === booking._id}
+                        className="px-4 py-2 text-xs font-bold text-white bg-fixlab-green hover:bg-opacity-90 rounded-lg transition-colors flex items-center gap-1 ml-auto disabled:opacity-70"
+                      >
+                        {processingId === booking._id ? <Loader2 className="animate-spin" size={14} /> : <CreditCard size={14} />}
+                        Pay Now
                       </button>
                     )}
                     {booking.paymentStatus === "paid" && (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
 import { CheckCircle, Loader2 } from "lucide-react";
@@ -14,7 +14,10 @@ function SuccessContent() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    if (!session_id) return;
+    if (!session_id) {
+      setLoading(false);
+      return;
+    }
     
     fetchApi(`/api/payments/verify?session_id=${session_id}`)
       .then(() => {
@@ -28,8 +31,8 @@ function SuccessContent() {
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-fixlab-green" size={48} /></div>;
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full text-center">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-[#F8F9FA]">
+      <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full text-center border border-gray-100">
         <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6">
           <CheckCircle className="text-green-500" size={40} />
         </div>

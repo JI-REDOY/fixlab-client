@@ -3,8 +3,8 @@ import { XCircle } from "lucide-react";
 
 export default function PaymentCancelPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full text-center">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-[#F8F9FA]">
+      <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full text-center border border-gray-100">
         <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
           <XCircle className="text-red-500" size={40} />
         </div>

@@ -1,10 +1,22 @@
-import { CreditCard } from "lucide-react";
+"use client";
 
-const payments = [
-  { id: "txn_123", service: "AC Servicing", technician: "Karim Ahmed", amount: 35, date: "2024-10-15" },
-];
+import { useState, useEffect } from "react";
+import { fetchApi } from "@/lib/api";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 export default function PaymentHistoryPage() {
+  const [payments, setPayments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // এখানে আপাতত ডামি ডেটা রাখছি, কারণ সার্ভারে customer payments API আলাদা করে বানানো হয়নি
+    // তবে এটা পরে সার্ভার থেকে আসবে
+    setLoading(false);
+  }, []);
+
+  if (loading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-fixlab-green" size={40} /></div>;
+
   return (
     <div className="space-y-6">
       <div>
@@ -25,13 +37,16 @@ export default function PaymentHistoryPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
+              {payments.length === 0 && (
+                <tr><td colSpan={5} className="text-center py-10 text-fixlab-gray">No payments yet.</td></tr>
+              )}
               {payments.map((p) => (
-                <tr key={p.id} className="hover:bg-gray-50/50">
-                  <td className="px-6 py-4 text-sm font-mono text-fixlab-gray">{p.id}</td>
-                  <td className="px-6 py-4 text-sm font-bold text-fixlab-charcoal">{p.service}</td>
-                  <td className="px-6 py-4 text-sm text-fixlab-gray">{p.technician}</td>
+                <tr key={p._id} className="hover:bg-gray-50/50">
+                  <td className="px-6 py-4 text-sm font-mono text-fixlab-gray">{p.transactionId}</td>
+                  <td className="px-6 py-4 text-sm font-bold text-fixlab-charcoal">{p.serviceTitle}</td>
+                  <td className="px-6 py-4 text-sm text-fixlab-gray">{p.technicianName}</td>
                   <td className="px-6 py-4 text-sm font-bold text-fixlab-green">${p.amount}</td>
-                  <td className="px-6 py-4 text-sm text-fixlab-gray">{p.date}</td>
+                  <td className="px-6 py-4 text-sm text-fixlab-gray">{new Date(p.paidAt).toLocaleDateString()}</td>
                 </tr>
               ))}
             </tbody>
