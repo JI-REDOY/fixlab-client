@@ -29,25 +29,32 @@ export default function SignInPage() {
     }
 
     try {
+      // JWT টোকেন ফেচ করা
       const res = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/auth/jwt`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: formData.email }),
       });
 
-      if (!res.ok) throw new Error("Token fetch failed");
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.message || "Failed to fetch token");
+      }
 
       const tokenData = await res.json();
+      
       if (tokenData.token) {
         localStorage.setItem("fixlab_token", tokenData.token);
         toast.success("Welcome back!");
         const role = data?.user?.role || 'customer';
         router.push(`/dashboard/${role}`);
+      } else {
+        throw new Error("No token received");
       }
-    } catch (err) {
-      toast.error("Signed in, but failed to fetch session token.");
-      const role = data?.user?.role || 'customer';
-      router.push(`/dashboard/${role}`);
+    } catch (err: any) {
+      toast.error(err.message || "Signed in, but failed to fetch session token.");
+      // চাইলে এখানেই রিডাইরেক্ট করতে পারেন, তবে টোকেন ছাড়া ড্যাশবোর্ড কাজ করবে না
+      setLoading(false);
     } finally {
       setLoading(false);
     }

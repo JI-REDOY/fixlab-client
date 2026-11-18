@@ -1,22 +1,35 @@
 "use client";
 
-import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
-
-const initialUsers = [
-  { _id: "u1", name: "Arpa Das", email: "arpa@example.com", role: "customer", joined: "2024-10-01", image: "https://ui-avatars.com/api/?name=Arpa+Das&background=1A432A&color=fff" },
-  { _id: "u2", name: "Rahim Uddin", email: "rahim@example.com", role: "technician", joined: "2024-09-15", image: "https://ui-avatars.com/api/?name=Rahim+Uddin&background=1A432A&color=fff" },
-  { _id: "u3", name: "Admin FixLab", email: "admin@fixlab.com", role: "admin", joined: "2024-01-01", image: "https://ui-avatars.com/api/?name=Admin+FixLab&background=1A432A&color=fff" },
-];
+import { fetchApi } from "@/lib/api";
+import { Loader2 } from "lucide-react";
 
 export default function ManageUsersPage() {
-  const [users, setUsers] = useState(initialUsers);
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleRoleChange = (id: string, newRole: string) => {
-    setUsers(users.map(u => u._id === id ? { ...u, role: newRole } : u));
-    toast.success(`User role updated to ${newRole}`);
+  useEffect(() => {
+    fetchApi("/api/admin/users")
+      .then((data) => setUsers(data))
+      .catch((err) => toast.error(err.message))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleRoleChange = async (id: string, newRole: string) => {
+    try {
+      await fetchApi(`/api/admin/users/${id}/role`, {
+        method: "PATCH",
+        body: JSON.stringify({ role: newRole }),
+      });
+      setUsers(users.map(u => u._id === id ? { ...u, role: newRole } : u));
+      toast.success(`User role updated to ${newRole}`);
+    } catch (err: any) {
+      toast.error(err.message);
+    }
   };
+
+  if (loading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-fixlab-green" size={40} /></div>;
 
   return (
     <div className="space-y-6">
@@ -33,7 +46,6 @@ export default function ManageUsersPage() {
                 <th className="px-6 py-4 text-xs font-bold text-fixlab-gray uppercase">User</th>
                 <th className="px-6 py-4 text-xs font-bold text-fixlab-gray uppercase">Email</th>
                 <th className="px-6 py-4 text-xs font-bold text-fixlab-gray uppercase">Role</th>
-                <th className="px-6 py-4 text-xs font-bold text-fixlab-gray uppercase">Joined</th>
                 <th className="px-6 py-4 text-xs font-bold text-fixlab-gray uppercase text-right">Actions</th>
               </tr>
             </thead>
@@ -42,7 +54,7 @@ export default function ManageUsersPage() {
                 <tr key={user._id} className="hover:bg-gray-50/50">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <img src={user.image} alt={user.name} className="w-10 h-10 rounded-full object-cover" />
+                      <img src={user.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=1A432A&color=fff&bold=true`} alt={user.name} className="w-10 h-10 rounded-full object-cover" />
                       <p className="font-bold text-sm text-fixlab-charcoal">{user.name}</p>
                     </div>
                   </td>
@@ -55,7 +67,6 @@ export default function ManageUsersPage() {
                       {user.role}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm text-fixlab-gray">{user.joined}</td>
                   <td className="px-6 py-4 text-right">
                     <select 
                       disabled={user.role === "admin"} 

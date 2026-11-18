@@ -1,26 +1,43 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Check, X } from "lucide-react";
-
-const initialServices = [
-  { _id: "s1", title: "iPhone Screen Replacement", technician: "Rahim Uddin", image: "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?q=80&w=200", status: "pending" },
-  { _id: "s2", title: "MacBook Pro Battery Repair", technician: "Karim Ahmed", image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?q=80&w=200", status: "approved" },
-  { _id: "s3", title: "AC Servicing", technician: "Rahim Uddin", image: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=200", status: "rejected" },
-];
+import { Check, X, Loader2 } from "lucide-react";
+import { fetchApi } from "@/lib/api";
 
 export default function AdminServicesPage() {
-  const [services, setServices] = useState(initialServices);
+  const [services, setServices] = useState<any[]>([]);
   const [filter, setFilter] = useState("all");
+  const [loading, setLoading] = useState(true);
 
-  const updateStatus = (id: string, newStatus: string) => {
-    setServices(services.map(s => s._id === id ? { ...s, status: newStatus } : s));
-    toast.success(`Service ${newStatus}`);
+  const fetchServices = () => {
+    fetchApi("/api/services") // আপাতত পাবলিক সার্ভিসগুলো আনছি (পরে অ্যাডমিনের জন্য আলাদা এন্ডপয়েন্ট করব)
+      .then((data) => setServices(data))
+      .catch((err) => toast.error(err.message))
+      .finally(() => setLoading(false));
   };
 
-  const filteredServices = filter === "all" ? services : services.filter(s => s.status === filter);
+  useEffect(() => {
+    fetchServices();
+  }, []);
+
+  const updateStatus = async (id: string, newStatus: string) => {
+    try {
+      await fetchApi(`/api/admin/services/${id}/approval`, {
+        method: "PATCH",
+        body: JSON.stringify({ approvalStatus: newStatus }),
+      });
+      setServices(services.map(s => s._id === id ? { ...s, approvalStatus: newStatus } : s));
+      toast.success(`Service ${newStatus}`);
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  const filteredServices = filter === "all" ? services : services.filter(s => s.approvalStatus === filter);
+
+  if (loading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-fixlab-green" size={40} /></div>;
 
   return (
     <div className="space-y-6">
@@ -66,17 +83,17 @@ export default function AdminServicesPage() {
                       <p className="font-bold text-sm text-fixlab-charcoal">{service.title}</p>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-sm text-fixlab-gray">{service.technician}</td>
+                  <td className="px-6 py-4 text-sm text-fixlab-gray">{service.technicianName}</td>
                   <td className="px-6 py-4">
                     <span className={`px-3 py-1 text-xs font-bold rounded-full capitalize ${
-                      service.status === "approved" ? "bg-green-100 text-green-700" :
-                      service.status === "pending" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"
+                      service.approvalStatus === "approved" ? "bg-green-100 text-green-700" :
+                      service.approvalStatus === "pending" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"
                     }`}>
-                      {service.status}
+                      {service.approvalStatus}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right space-x-2">
-                    {service.status === "pending" && (
+                    {service.approvalStatus === "pending" && (
                       <>
                         <button onClick={() => updateStatus(service._id, "approved")} className="p-2 text-green-600 bg-green-50 hover:bg-green-100 rounded-lg transition-colors" title="Approve"><Check size={16} /></button>
                         <button onClick={() => updateStatus(service._id, "rejected")} className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors" title="Reject"><X size={16} /></button>

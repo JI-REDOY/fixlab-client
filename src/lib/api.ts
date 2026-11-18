@@ -4,10 +4,14 @@ export const fetchApi = async (endpoint: string, options: RequestInit = {}) => {
   const token = typeof window !== "undefined" ? localStorage.getItem("fixlab_token") : null;
   
   const headers: HeadersInit = {
-    "Content-Type": "application/json",
     ...(token && { Authorization: `Bearer ${token}` }),
     ...options.headers,
   };
+
+  // যদি FormData না হয়, তবেই Content-Type JSON সেট করব
+  if (!(options.body instanceof FormData)) {
+    (headers as any)["Content-Type"] = "application/json";
+  }
 
   const res = await fetch(`${SERVER_URL}${endpoint}`, {
     ...options,
