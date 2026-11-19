@@ -4,7 +4,7 @@ import { useState } from "react";
 import { X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
-import { fetchApi } from "@/lib/api"; // API হেল্পার
+import { fetchApi } from "@/lib/api";
 
 interface RequestModalProps {
   service: any;
@@ -52,7 +52,6 @@ export default function RequestModal({ service, onClose }: RequestModalProps) {
     setLoading(true);
 
     try {
-      // সার্ভারে ডেটা পাঠানো
       await fetchApi("/api/bookings", {
         method: "POST",
         body: JSON.stringify({
@@ -66,9 +65,7 @@ export default function RequestModal({ service, onClose }: RequestModalProps) {
 
       toast.success("Repair request sent successfully!");
       onClose();
-      
-      // My Bookings পেজে রিডাইরেক্ট করা
-      window.location.href = "/dashboard/customer/bookings"; 
+      window.location.href = "/dashboard/customer/bookings";
     } catch (err: any) {
       toast.error(err.message || "Failed to send request");
     } finally {

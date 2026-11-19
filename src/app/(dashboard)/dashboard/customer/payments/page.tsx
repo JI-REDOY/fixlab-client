@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { fetchApi } from "@/lib/api";
-import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
 export default function PaymentHistoryPage() {
@@ -10,9 +9,10 @@ export default function PaymentHistoryPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // এখানে আপাতত ডামি ডেটা রাখছি, কারণ সার্ভারে customer payments API আলাদা করে বানানো হয়নি
-    // তবে এটা পরে সার্ভার থেকে আসবে
-    setLoading(false);
+    fetchApi("/api/payments/my-payments")
+      .then((data) => setPayments(data))
+      .catch((err) => console.error(err))
+      .finally(() => setLoading(false));
   }, []);
 
   if (loading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-fixlab-green" size={40} /></div>;
@@ -42,7 +42,7 @@ export default function PaymentHistoryPage() {
               )}
               {payments.map((p) => (
                 <tr key={p._id} className="hover:bg-gray-50/50">
-                  <td className="px-6 py-4 text-sm font-mono text-fixlab-gray">{p.transactionId}</td>
+                  <td className="px-6 py-4 text-sm font-mono text-fixlab-gray truncate max-w-[100px]">{p.transactionId}</td>
                   <td className="px-6 py-4 text-sm font-bold text-fixlab-charcoal">{p.serviceTitle}</td>
                   <td className="px-6 py-4 text-sm text-fixlab-gray">{p.technicianName}</td>
                   <td className="px-6 py-4 text-sm font-bold text-fixlab-green">${p.amount}</td>
