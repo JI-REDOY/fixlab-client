@@ -8,7 +8,6 @@ export const fetchApi = async (endpoint: string, options: RequestInit = {}) => {
     ...options.headers,
   };
 
-  // যদি FormData না হয়, তবেই Content-Type JSON সেট করব
   if (!(options.body instanceof FormData)) {
     (headers as any)["Content-Type"] = "application/json";
   }

@@ -1,17 +1,22 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import ServiceCard from "../cards/ServiceCard";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
-
-const dummyServices = [
-  { _id: "1", title: "iPhone Screen Replacement", category: "Smartphone", image: "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?q=80&w=800&auto=format&fit=crop", basePrice: 49, serviceMode: "Home Visit", serviceArea: "Dhanmondi, Dhaka", technicianName: "Rahim Uddin" },
-  { _id: "2", title: "MacBook Pro Battery Repair", category: "Laptop & PC", image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?q=80&w=800&auto=format&fit=crop", basePrice: 89, serviceMode: "Shop Drop-off", serviceArea: "Mirpur, Dhaka", technicianName: "Karim Ahmed" },
-  { _id: "3", title: "AC Servicing & Gas Refill", category: "AC", image: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=800&auto=format&fit=crop", basePrice: 35, serviceMode: "Home Visit", serviceArea: "Uttara, Dhaka", technicianName: "Rahim Uddin" },
-  { _id: "4", title: "Refrigerator Cooling Issue", category: "Refrigerator", image: "https://images.unsplash.com/photo-1584568694244-14fbdf83bd30?q=80&w=800&auto=format&fit=crop", basePrice: 55, serviceMode: "Home Visit", serviceArea: "Gulshan, Dhaka", technicianName: "Karim Ahmed" },
-  { _id: "5", title: "Washing Machine Motor Fix", category: "Washing Machine", image: "https://images.unsplash.com/photo-1626806819282-2c1dc01a5e0c?q=80&w=800&auto=format&fit=crop", basePrice: 40, serviceMode: "Shop Drop-off", serviceArea: "Banani, Dhaka", technicianName: "Jamil Khan" },
-  { _id: "6", title: "Smart TV Screen Repair", category: "TV", image: "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?q=80&w=800&auto=format&fit=crop", basePrice: 75, serviceMode: "Home Visit", serviceArea: "Mohakhali, Dhaka", technicianName: "Rahim Uddin" },
-];
+import { ArrowRight, Loader2 } from "lucide-react";
+import { fetchApi } from "@/lib/api";
 
 export default function FeaturedServices() {
+  const [services, setServices] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchApi("/api/services/featured")
+      .then((data) => setServices(data))
+      .catch((err) => console.error(err))
+      .finally(() => setLoading(false));
+  }, []);
+
   return (
     <section className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-20">
       <div className="flex justify-between items-end mb-10">
@@ -24,11 +29,17 @@ export default function FeaturedServices() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {dummyServices.map((service) => (
-          <ServiceCard key={service._id} service={service} />
-        ))}
-      </div>
+      {loading ? (
+        <div className="flex justify-center py-10"><Loader2 className="animate-spin text-fixlab-green" size={40} /></div>
+      ) : services.length === 0 ? (
+        <div className="text-center py-10 text-fixlab-gray">No services available yet.</div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {services.map((service) => (
+            <ServiceCard key={service._id} service={service} />
+          ))}
+        </div>
+      )}
       
       <div className="mt-8 flex justify-center sm:hidden">
         <Link href="/services" className="flex items-center gap-2 text-fixlab-green font-bold hover:underline">

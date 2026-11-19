@@ -1,16 +1,24 @@
 "use client";
 
-import { useState } from "react";
-
-const bookings = [
-  { _id: "b1", service: "iPhone Screen Replacement", customer: "Arpa Das", technician: "Rahim Uddin", date: "2024-10-20", status: "completed", payment: "paid", amount: 49 },
-  { _id: "b2", service: "MacBook Battery", customer: "Sajid Khan", technician: "Karim Ahmed", date: "2024-10-18", status: "in-progress", payment: "unpaid", amount: 89 },
-  { _id: "b3", service: "AC Servicing", customer: "Rahim Ali", technician: "Rahim Uddin", date: "2024-10-15", status: "requested", payment: "unpaid", amount: 35 },
-];
+import { useState, useEffect } from "react";
+import { fetchApi } from "@/lib/api";
+import { Loader2 } from "lucide-react";
 
 export default function AdminBookingsPage() {
+  const [bookings, setBookings] = useState<any[]>([]);
   const [filter, setFilter] = useState("all");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchApi("/api/admin/bookings")
+      .then((data) => setBookings(data))
+      .catch((err) => console.error(err))
+      .finally(() => setLoading(false));
+  }, []);
+
   const filteredBookings = filter === "all" ? bookings : bookings.filter(b => b.status === filter);
+
+  if (loading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-fixlab-green" size={40} /></div>;
 
   return (
     <div className="space-y-6">
@@ -20,7 +28,7 @@ export default function AdminBookingsPage() {
           <p className="text-fixlab-gray text-sm">Monitor every repair job across the platform.</p>
         </div>
         <div className="flex gap-2 bg-white p-1 rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
-          {["all", "requested", "in-progress", "completed"].map((s) => (
+          {["all", "requested", "accepted", "in-progress", "completed", "cancelled"].map((s) => (
             <button
               key={s}
               onClick={() => setFilter(s)}
@@ -28,7 +36,7 @@ export default function AdminBookingsPage() {
                 filter === s ? "bg-fixlab-green text-white" : "text-fixlab-gray hover:bg-fixlab-cream"
               }`}
             >
-              {s}
+              {s.replace("-", " ")}
             </button>
           ))}
         </div>
@@ -44,31 +52,30 @@ export default function AdminBookingsPage() {
                 <th className="px-6 py-4 text-xs font-bold text-fixlab-gray uppercase">Technician</th>
                 <th className="px-6 py-4 text-xs font-bold text-fixlab-gray uppercase">Date</th>
                 <th className="px-6 py-4 text-xs font-bold text-fixlab-gray uppercase">Status</th>
-                <th className="px-6 py-4 text-xs font-bold text-fixlab-gray uppercase">Payment</th>
+                <th className="px-6 py-4 text-xs font-bold text-fixlab-gray uppercase">Amount</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
+              {filteredBookings.length === 0 && (
+                <tr><td colSpan={6} className="text-center py-10 text-fixlab-gray">No bookings found.</td></tr>
+              )}
               {filteredBookings.map((b) => (
                 <tr key={b._id} className="hover:bg-gray-50/50">
-                  <td className="px-6 py-4 font-bold text-sm text-fixlab-charcoal">{b.service}</td>
-                  <td className="px-6 py-4 text-sm text-fixlab-gray">{b.customer}</td>
-                  <td className="px-6 py-4 text-sm text-fixlab-gray">{b.technician}</td>
-                  <td className="px-6 py-4 text-sm text-fixlab-gray">{b.date}</td>
+                  <td className="px-6 py-4 font-bold text-sm text-fixlab-charcoal">{b.serviceTitle}</td>
+                  <td className="px-6 py-4 text-sm text-fixlab-gray">{b.customerName}</td>
+                  <td className="px-6 py-4 text-sm text-fixlab-gray">{b.technicianName}</td>
+                  <td className="px-6 py-4 text-sm text-fixlab-gray">{new Date(b.preferredDate).toLocaleDateString()}</td>
                   <td className="px-6 py-4">
                     <span className={`px-3 py-1 text-xs font-bold rounded-full capitalize ${
                       b.status === "completed" ? "bg-green-100 text-green-700" :
-                      b.status === "in-progress" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"
+                      b.status === "in-progress" ? "bg-amber-100 text-amber-700" : 
+                      b.status === "accepted" ? "bg-indigo-100 text-indigo-700" : 
+                      "bg-blue-100 text-blue-700"
                     }`}>
-                      {b.status}
+                      {b.status.replace("-", " ")}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
-                    <span className={`px-3 py-1 text-xs font-bold rounded-full capitalize ${
-                      b.payment === "paid" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"
-                    }`}>
-                      {b.payment}
-                    </span>
-                  </td>
+                  <td className="px-6 py-4 text-sm font-bold text-fixlab-green">${b.finalAmount || b.basePrice}</td>
                 </tr>
               ))}
             </tbody>

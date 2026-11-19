@@ -12,7 +12,7 @@ export default function AdminServicesPage() {
   const [loading, setLoading] = useState(true);
 
   const fetchServices = () => {
-    fetchApi("/api/services") // আপাতত পাবলিক সার্ভিসগুলো আনছি (পরে অ্যাডমিনের জন্য আলাদা এন্ডপয়েন্ট করব)
+    fetchApi("/api/admin/services")
       .then((data) => setServices(data))
       .catch((err) => toast.error(err.message))
       .finally(() => setLoading(false));

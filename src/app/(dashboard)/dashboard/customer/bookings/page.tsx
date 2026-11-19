@@ -49,7 +49,7 @@ export default function MyBookingsPage() {
         method: "POST",
         body: JSON.stringify({ bookingId }),
       });
-      window.location.href = data.url; // Stripe Checkout এ রিডাইরেক্ট
+      window.location.href = data.url;
     } catch (err: any) {
       toast.error(err.message);
       setProcessingId(null);
