@@ -1,147 +1,394 @@
 "use client";
 
 import { toast } from "sonner";
-import { Check, X, Play, CheckCircle, Loader2 } from "lucide-react";
-import { useState, useEffect } from "react";
+import {
+  Check,
+  X,
+  Play,
+  CheckCircle,
+  Loader2,
+  Sparkles,
+  User,
+  Wrench,
+  Calendar,
+  Activity,
+  DollarSign,
+} from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
 import { fetchApi } from "@/lib/api";
 
+const filterTabs = ["all", "requested", "accepted", "in-progress", "completed"];
+
+interface RequestItem {
+  _id: string;
+  customerName?: string;
+  customerPhone?: string;
+  address?: string;
+  serviceTitle?: string;
+  problemDescription?: string;
+  preferredDate?: string;
+  status: string;
+  basePrice?: number | string;
+}
+
 export default function RequestsPage() {
-  const [requests, setRequests] = useState<any[]>([]);
+  const [requests, setRequests] = useState<RequestItem[]>([]);
   const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedBooking, setSelectedBooking] = useState<any>(null);
+  const [selectedBooking, setSelectedBooking] = useState<RequestItem | null>(
+    null
+  );
   const [finalAmount, setFinalAmount] = useState("");
 
-  const fetchRequests = () => {
+  const fetchRequests = useCallback(() => {
+    setLoading(true);
     fetchApi("/api/bookings/technician")
-      .then((data) => setRequests(data))
-      .catch((err) => toast.error(err.message))
+      .then((data) => {
+        const list = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.requests)
+          ? data.requests
+          : Array.isArray(data?.bookings)
+          ? data.bookings
+          : Array.isArray(data?.data)
+          ? data.data
+          : [];
+        setRequests(list);
+      })
+      .catch((err: any) => {
+        toast.error(err?.message || "Failed to load requests");
+        setRequests([]);
+      })
       .finally(() => setLoading(false));
-  };
+  }, []);
 
   useEffect(() => {
     fetchRequests();
-  }, []);
+  }, [fetchRequests]);
 
-  const updateStatus = async (id: string, newStatus: string, amount?: number) => {
+  const updateStatus = async (
+    id: string,
+    newStatus: string,
+    amount?: number
+  ) => {
+    setUpdatingId(id);
     try {
       await fetchApi(`/api/bookings/${id}/status`, {
         method: "PATCH",
         body: JSON.stringify({ status: newStatus, finalAmount: amount }),
       });
       toast.success(`Request ${newStatus}`);
-      fetchRequests();
       setModalOpen(false);
+      setSelectedBooking(null);
+      fetchRequests();
     } catch (err: any) {
-      toast.error(err.message);
+      toast.error(err?.message || "Could not update status");
+    } finally {
+      setUpdatingId(null);
     }
   };
 
-  const openCompleteModal = (booking: any) => {
+  const openCompleteModal = (booking: RequestItem) => {
     setSelectedBooking(booking);
-    setFinalAmount(booking.basePrice.toString());
+    setFinalAmount((booking.basePrice ?? "").toString());
     setModalOpen(true);
   };
 
-  const filteredRequests = filter === "all" ? requests : requests.filter(r => r.status === filter);
+  const filteredRequests =
+    filter === "all"
+      ? requests
+      : requests.filter((r) => r.status === filter);
 
-  if (loading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-fixlab-green" size={40} /></div>;
+  if (loading) {
+    return (
+      <div className="flex justify-center py-24">
+        <Loader2 className="animate-spin text-[#ff5722]" size={42} />
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-extrabold text-fixlab-charcoal">Manage Requests</h1>
-          <p className="text-fixlab-gray text-sm">Review and update job statuses for incoming requests.</p>
-        </div>
-        <div className="flex gap-2 bg-white p-1 rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
-          {["all", "requested", "accepted", "in-progress", "completed"].map((s) => (
-            <button key={s} onClick={() => setFilter(s)} className={`px-4 py-2 rounded-lg text-xs font-bold capitalize whitespace-nowrap transition-all ${filter === s ? "bg-fixlab-green text-white" : "text-fixlab-gray hover:bg-fixlab-cream"}`}>
-              {s.replace("-", " ")}
-            </button>
-          ))}
+    <div className="space-y-8 relative z-10">
+      {/* Transparent Soft UI Header & Filter Banner */}
+      <div className="relative overflow-hidden rounded-[2rem] bg-transparent hover:bg-white/5 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/12 p-6 sm:p-8 shadow-[14px_14px_28px_rgba(15,23,42,0.13),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)] transition-all duration-300">
+        <div className="relative z-10 flex flex-col lg:flex-row lg:justify-between lg:items-center gap-5">
+          <div>
+            <span className="inline-flex items-center gap-1.5 py-1 px-3.5 rounded-full bg-white/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-[#ff5722]/25 text-[#ff5722] font-extrabold tracking-wider uppercase text-[11px] mb-3 shadow-[5px_5px_12px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)]">
+              <Sparkles size={12} /> Job Queue
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+              Manage <span className="text-[#ff5722]">Requests</span>
+            </h1>
+            <p className="text-gray-700 text-sm font-medium mt-1">
+              Review and update job statuses for incoming requests.
+            </p>
+          </div>
+
+          {/* Transparent Soft UI Filter Tabs */}
+          <div className="flex gap-1.5 bg-white/10 backdrop-blur-[1px] p-1.5 rounded-2xl border border-white/90 ring-1 ring-slate-900/10 shadow-[6px_6px_14px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)] overflow-x-auto self-start lg:self-center">
+            {filterTabs.map((s) => {
+              const isActive = filter === s;
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setFilter(s)}
+                  className={`px-4 py-2 rounded-xl text-xs font-extrabold capitalize whitespace-nowrap transition-all cursor-pointer ${
+                    isActive
+                      ? "bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white shadow-[4px_4px_10px_rgba(255,87,34,0.3)]"
+                      : "text-gray-800 hover:bg-white/20"
+                  }`}
+                >
+                  {s.replace("-", " ")}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+      {/* Transparent Soft UI Table Card */}
+      <div className="relative overflow-hidden bg-transparent backdrop-blur-[1px] rounded-[2rem] border border-white/85 ring-1 ring-slate-900/12 shadow-[14px_14px_30px_rgba(15,23,42,0.14),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)]">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-fixlab-cream border-b border-gray-100">
-                <th className="px-6 py-4 text-xs font-bold text-fixlab-gray uppercase">Customer Info</th>
-                <th className="px-6 py-4 text-xs font-bold text-fixlab-gray uppercase">Service & Problem</th>
-                <th className="px-6 py-4 text-xs font-bold text-fixlab-gray uppercase">Date</th>
-                <th className="px-6 py-4 text-xs font-bold text-fixlab-gray uppercase">Status</th>
-                <th className="px-6 py-4 text-xs font-bold text-fixlab-gray uppercase text-right">Actions</th>
+              <tr className="bg-white/10 border-b border-white/80">
+                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
+                  <span className="inline-flex items-center gap-1.5">
+                    <User size={13} className="text-[#ff5722]" />
+                    Customer Info
+                  </span>
+                </th>
+                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Wrench size={13} className="text-[#ff5722]" />
+                    Service & Problem
+                  </span>
+                </th>
+                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Calendar size={13} className="text-[#ff5722]" />
+                    Date
+                  </span>
+                </th>
+                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Activity size={13} className="text-[#ff5722]" />
+                    Status
+                  </span>
+                </th>
+                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider text-right">
+                  Actions
+                </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
-              {filteredRequests.length === 0 && (
-                <tr><td colSpan={5} className="text-center py-10 text-fixlab-gray">No requests found.</td></tr>
-              )}
-              {filteredRequests.map((req) => (
-                <tr key={req._id} className="hover:bg-gray-50/50">
-                  <td className="px-6 py-4">
-                    <p className="font-bold text-sm text-fixlab-charcoal">{req.customerName}</p>
-                    <p className="text-xs text-fixlab-gray">{req.customerPhone}</p>
-                    <p className="text-xs text-fixlab-gray truncate max-w-[150px]">{req.address}</p>
-                  </td>
-                  <td className="px-6 py-4">
-                    <p className="font-bold text-sm text-fixlab-charcoal">{req.serviceTitle}</p>
-                    <p className="text-xs text-fixlab-gray truncate max-w-[200px]">{req.problemDescription}</p>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-fixlab-gray">{new Date(req.preferredDate).toLocaleDateString()}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-3 py-1 text-xs font-bold rounded-full capitalize ${
-                      req.status === "requested" ? "bg-blue-100 text-blue-700" :
-                      req.status === "accepted" ? "bg-indigo-100 text-indigo-700" :
-                      req.status === "in-progress" ? "bg-amber-100 text-amber-700" :
-                      "bg-green-100 text-green-700"
-                    }`}>
-                      {req.status.replace("-", " ")}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right space-x-2">
-                    {req.status === "requested" && (
-                      <>
-                        <button onClick={() => updateStatus(req._id, "accepted")} className="p-2 text-green-600 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"><Check size={16} /></button>
-                        <button onClick={() => updateStatus(req._id, "rejected")} className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"><X size={16} /></button>
-                      </>
-                    )}
-                    {req.status === "accepted" && (
-                      <button onClick={() => updateStatus(req._id, "in-progress")} className="px-3 py-1.5 text-xs font-bold text-white bg-amber-500 hover:bg-amber-600 rounded-lg flex items-center gap-1 ml-auto">
-                        <Play size={14} /> Start Work
-                      </button>
-                    )}
-                    {req.status === "in-progress" && (
-                      <button onClick={() => openCompleteModal(req)} className="px-3 py-1.5 text-xs font-bold text-white bg-fixlab-green hover:bg-opacity-90 rounded-lg flex items-center gap-1 ml-auto">
-                        <CheckCircle size={14} /> Complete
-                      </button>
-                    )}
+
+            <tbody className="divide-y divide-white/65">
+              {filteredRequests.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-16 text-center">
+                    <div className="inline-flex flex-col items-center justify-center p-6 rounded-[1.75rem] bg-white/10 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/12 shadow-[10px_10px_22px_rgba(15,23,42,0.1),-8px_-8px_18px_rgba(255,255,255,0.92)]">
+                      <div className="w-14 h-14 rounded-2xl bg-white/15 border border-white/90 ring-1 ring-[#ff5722]/25 flex items-center justify-center text-[#ff5722] mb-3 shadow-[5px_5px_12px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)]">
+                        <Wrench size={24} />
+                      </div>
+                      <p className="text-sm font-extrabold text-gray-900">
+                        No requests found.
+                      </p>
+                      <p className="text-xs font-medium text-gray-700 mt-1">
+                        Incoming customer repair requests will show up here.
+                      </p>
+                    </div>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredRequests.map((req) => {
+                  const formattedDate = req.preferredDate
+                    ? new Date(req.preferredDate).toLocaleDateString()
+                    : "—";
+                  const isBusy = updatingId === req._id;
+
+                  const badgeClass =
+                    req.status === "requested"
+                      ? "bg-blue-500/12 text-blue-700 ring-blue-500/25"
+                      : req.status === "accepted"
+                      ? "bg-indigo-500/12 text-indigo-700 ring-indigo-500/25"
+                      : req.status === "in-progress"
+                      ? "bg-amber-500/15 text-amber-800 ring-amber-500/30"
+                      : req.status === "completed"
+                      ? "bg-emerald-500/12 text-emerald-700 ring-emerald-500/25"
+                      : "bg-[#ff5722]/12 text-[#ff5722] ring-[#ff5722]/25";
+
+                  return (
+                    <tr
+                      key={req._id}
+                      className="group hover:bg-white/10 transition-all duration-200"
+                    >
+                      <td className="px-6 py-4">
+                        <p className="font-extrabold text-sm text-gray-900 group-hover:text-[#ff5722] transition-colors">
+                          {req.customerName || "Customer"}
+                        </p>
+                        {req.customerPhone && (
+                          <p className="text-xs font-semibold text-gray-700 mt-0.5">
+                            {req.customerPhone}
+                          </p>
+                        )}
+                        {req.address && (
+                          <p
+                            title={req.address}
+                            className="text-xs font-medium text-gray-600 truncate max-w-[170px] mt-0.5"
+                          >
+                            {req.address}
+                          </p>
+                        )}
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <p className="font-extrabold text-sm text-gray-900">
+                          {req.serviceTitle || "Repair Service"}
+                        </p>
+                        {req.problemDescription && (
+                          <p
+                            title={req.problemDescription}
+                            className="text-xs font-medium text-gray-700 truncate max-w-[220px] mt-0.5"
+                          >
+                            {req.problemDescription}
+                          </p>
+                        )}
+                      </td>
+
+                      <td className="px-6 py-4 text-sm font-semibold text-gray-800 whitespace-nowrap">
+                        {formattedDate}
+                      </td>
+
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`inline-block px-3.5 py-1 text-xs font-extrabold rounded-full capitalize bg-white/15 backdrop-blur-[1px] border border-white/90 ring-1 shadow-[3px_3px_8px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)] ${badgeClass}`}
+                        >
+                          {req.status.replace("-", " ")}
+                        </span>
+                      </td>
+
+                      <td className="px-6 py-4 text-right whitespace-nowrap">
+                        <div className="inline-flex items-center justify-end gap-2">
+                          {req.status === "requested" && (
+                            <>
+                              <button
+                                type="button"
+                                disabled={isBusy}
+                                onClick={() =>
+                                  updateStatus(req._id, "accepted")
+                                }
+                                title="Accept request"
+                                className="p-2 text-emerald-700 bg-white/15 hover:bg-emerald-500/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-emerald-500/30 rounded-xl shadow-[4px_4px_10px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)] transition-all disabled:opacity-60 cursor-pointer"
+                              >
+                                <Check size={16} />
+                              </button>
+                              <button
+                                type="button"
+                                disabled={isBusy}
+                                onClick={() =>
+                                  updateStatus(req._id, "rejected")
+                                }
+                                title="Reject request"
+                                className="p-2 text-red-600 bg-white/15 hover:bg-red-500/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-red-500/30 rounded-xl shadow-[4px_4px_10px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)] transition-all disabled:opacity-60 cursor-pointer"
+                              >
+                                <X size={16} />
+                              </button>
+                            </>
+                          )}
+
+                          {req.status === "accepted" && (
+                            <button
+                              type="button"
+                              disabled={isBusy}
+                              onClick={() =>
+                                updateStatus(req._id, "in-progress")
+                              }
+                              className="px-3.5 py-2 text-xs font-extrabold text-amber-800 bg-white/20 hover:bg-amber-500/20 backdrop-blur-[1px] border border-white/90 ring-1 ring-amber-500/35 rounded-full shadow-[4px_4px_10px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)] inline-flex items-center gap-1.5 transition-all disabled:opacity-60 cursor-pointer"
+                            >
+                              <Play size={13} />
+                              <span>Start Work</span>
+                            </button>
+                          )}
+
+                          {req.status === "in-progress" && (
+                            <button
+                              type="button"
+                              disabled={isBusy}
+                              onClick={() => openCompleteModal(req)}
+                              className="px-4 py-2 text-xs font-extrabold text-white bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] hover:from-[#e64a19] hover:to-[#ff5722] rounded-full shadow-[5px_5px_14px_rgba(255,87,34,0.32),-3px_-3px_10px_rgba(255,255,255,0.85)] inline-flex items-center gap-1.5 transition-all disabled:opacity-60 cursor-pointer"
+                            >
+                              <CheckCircle size={14} />
+                              <span>Complete</span>
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Complete Modal */}
+      {/* Transparent Soft UI Complete Modal */}
       {modalOpen && selectedBooking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white p-6 rounded-3xl shadow-xl w-full max-w-sm">
-            <h3 className="text-lg font-bold text-fixlab-charcoal mb-4">Enter Final Amount</h3>
-            <input
-              type="number"
-              min="1"
-              value={finalAmount}
-              onChange={(e) => setFinalAmount(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl bg-fixlab-cream mb-4 outline-none focus:ring-2 focus:ring-fixlab-green/20"
-            />
-            <div className="flex gap-2">
-              <button onClick={() => setModalOpen(false)} className="flex-1 py-3 bg-gray-100 text-fixlab-charcoal font-bold rounded-xl hover:bg-gray-200">Cancel</button>
-              <button onClick={() => updateStatus(selectedBooking._id, "completed", Number(finalAmount))} className="flex-1 py-3 bg-fixlab-green text-white font-bold rounded-xl hover:bg-opacity-90">Confirm</button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[2px] p-4">
+          <div className="relative w-full max-w-sm rounded-[2rem] bg-white/25 backdrop-blur-[4px] border border-white/90 ring-1 ring-slate-900/15 p-6 sm:p-7 shadow-[16px_16px_34px_rgba(15,23,42,0.22),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.9)]">
+            <h3 className="text-lg font-extrabold text-gray-900 mb-1">
+              Enter <span className="text-[#ff5722]">Final Amount</span>
+            </h3>
+            <p className="text-xs font-medium text-gray-700 mb-4">
+              Confirm the completed repair charge for{" "}
+              <span className="font-bold text-gray-900">
+                {selectedBooking.serviceTitle || "this service"}
+              </span>
+              .
+            </p>
+
+            <div className="relative mb-5">
+              <DollarSign
+                size={16}
+                className="text-[#ff5722] absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"
+              />
+              <input
+                type="number"
+                min="1"
+                value={finalAmount}
+                onChange={(e) => setFinalAmount(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 rounded-2xl bg-white/20 border border-white/90 ring-1 ring-slate-900/12 text-sm font-bold text-gray-900 outline-none focus:ring-2 focus:ring-[#ff5722]/35 focus:border-[#ff5722]/50 shadow-[inset_1px_1px_3px_rgba(15,23,42,0.07)]"
+              />
+            </div>
+
+            <div className="flex gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setModalOpen(false);
+                  setSelectedBooking(null);
+                }}
+                className="flex-1 py-3 bg-white/20 hover:bg-white/35 border border-white/90 text-gray-900 text-xs sm:text-sm font-extrabold rounded-full shadow-[5px_5px_12px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)] transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={updatingId === selectedBooking._id}
+                onClick={() =>
+                  updateStatus(
+                    selectedBooking._id,
+                    "completed",
+                    Number(finalAmount)
+                  )
+                }
+                className="flex-1 py-3 bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] hover:from-[#e64a19] hover:to-[#ff5722] text-white text-xs sm:text-sm font-extrabold rounded-full shadow-[6px_6px_15px_rgba(255,87,34,0.34),-4px_-4px_10px_rgba(255,255,255,0.85)] transition-all disabled:opacity-60 cursor-pointer"
+              >
+                {updatingId === selectedBooking._id ? "Saving..." : "Confirm"}
+              </button>
             </div>
           </div>
         </div>

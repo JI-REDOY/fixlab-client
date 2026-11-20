@@ -1,50 +1,126 @@
 @import "tailwindcss";
 
-@theme {
-  --color-fixlab-green: #1A432A; /* Deep Forest Green */
-  --color-fixlab-mint: #A3E6B5; /* Light Mint Accent */
-  --color-fixlab-cream: #F8F9FA; /* Off-white Background */
-  --color-fixlab-charcoal: #1E1E1E; /* Dark Text */
-  --color-fixlab-gray: #6B7280;
-  
-  --font-sans: var(--font-inter), system-ui, sans-serif;
-}
-
 @layer base {
-  body {
-    background-color: var(--color-fixlab-cream);
-    color: var(--color-fixlab-charcoal);
-    font-family: var(--font-sans);
+  :root {
+    /* এখানে ব্যাকগ্রাউন্ড কালার হালকা অ্যাশ (#f1f3f6) করা হলো */
+       --background: #e2e8f0; /* অথবা #e5e7eb */
+    --foreground: #111827;
+    --card: #ffffff;
+    --card-foreground: #111827;
+    --popover: #ffffff;
+    --popover-foreground: #111827;
+    --primary: #ff5722; /* আপনার কমলা কালার */
+    --primary-foreground: #ffffff;
+    --secondary: #f3f4f6;
+    --secondary-foreground: #111827;
+    --muted: #f3f4f6;
+    --muted-foreground: #6b7280;
+    --accent: #ff5722;
+    --accent-foreground: #ffffff;
+    --destructive: #ef4444;
+    --destructive-foreground: #ffffff;
+    --border: #e5e7eb;
+    --input: #e5e7eb;
+    --ring: #ff5722;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: #000000;
+    --foreground: #ffffff;
+    --card: #0a0a0a;
+    --card-foreground: #ffffff;
+    --popover: #0a0a0a;
+    --popover-foreground: #ffffff;
+    --primary: #ff5722;
+    --primary-foreground: #ffffff;
+    --secondary: #111111;
+    --secondary-foreground: #ffffff;
+    --muted: #111111;
+    --muted-foreground: #a1a1aa;
+    --accent: #ff5722;
+    --accent-foreground: #ffffff;
+    --destructive: #7f1d1d;
+    --destructive-foreground: #ffffff;
+    --border: #222222;
+    --input: #222222;
+    --ring: #ff5722;
   }
 }
 
-/* Premium Glassmorphism Utility */
-.glass-nav {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-float-delayed: float 8s ease-in-out infinite 2s;
 }
 
-.glass-card {
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-inter), Arial, sans-serif;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    overflow-x: hidden;
+  }
 }
 
-/* Neumorphic Input */
-.neumorphic-input {
-  background: #F1F3F5;
-  box-shadow: inset 4px 4px 8px rgba(0, 0, 0, 0.05), 
-              inset -4px -4px 8px rgba(255, 255, 255, 1);
-  border: 1px solid transparent;
-  transition: all 0.3s ease;
+@keyframes float {
+  0% { transform: translateY(0px) rotate(var(--tw-rotate, 0deg)); }
+  50% { transform: translateY(-20px) rotate(var(--tw-rotate, 0deg)); }
+  100% { transform: translateY(0px) rotate(var(--tw-rotate, 0deg)); }
 }
 
-.neumorphic-input:focus {
-  background: #F8F9FA;
-  box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.05), 
-              inset -2px -2px 5px rgba(255, 255, 255, 1),
-              0 0 0 2px rgba(26, 67, 42, 0.2); 
-  outline: none;
+/* --- Floating Icons Class --- */
+.floating-icon {
+  position: absolute;
+  animation: float 6s ease-in-out infinite;
+  z-index: 0; 
+}
+
+/* অটোফিল ফিক্স */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active{
+    -webkit-box-shadow: 0 0 0 30px var(--background) inset !important;
+    -webkit-text-fill-color: var(--foreground) !important;
+    transition: background-color 5000s ease-in-out 0s;
+}
+
+/* --- Marquee Animation --- */
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  animation: marquee 30s linear infinite;
 }

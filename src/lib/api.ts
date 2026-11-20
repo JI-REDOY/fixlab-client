@@ -3,6 +3,10 @@ const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:5000"
 export const fetchApi = async (endpoint: string, options: RequestInit = {}) => {
   const token = typeof window !== "undefined" ? localStorage.getItem("fixlab_token") : null;
   
+  if (!token) {
+    console.warn("No token found in localStorage for endpoint:", endpoint);
+  }
+
   const headers: HeadersInit = {
     ...(token && { Authorization: `Bearer ${token}` }),
     ...options.headers,

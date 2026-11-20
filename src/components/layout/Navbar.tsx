@@ -4,263 +4,308 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
-import { useEffect, useState } from "react";
-import { Menu, X, LogOut, LayoutDashboard, User, ArrowUpRight } from "lucide-react";
+import {
+  ArrowRight,
+  Menu,
+  X,
+  LayoutDashboard,
+  User,
+  LogOut,
+  ChevronDown,
+  Sparkles,
+} from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
-
-const LOBE_PATH =
-  "M0 0 H400 V14 H394 C360 14 340 30 330 60 C320 92 306 112 272 112 H0 Z";
 
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const [isOpen, setIsOpen] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
   const { data: session } = authClient.useSession();
 
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 16);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const closeMenus = () => {
-    setIsOpen(false);
-    setDropdownOpen(false);
-  };
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+
+    const handleScroll = () => {
+      if (window.scrollY > 20) {
+        setScrolled(true);
+      } else {
+        setScrolled(false);
+      }
+    };
+    window.addEventListener("scroll", handleScroll);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
 
   const handleSignOut = async () => {
     await authClient.signOut();
     localStorage.removeItem("fixlab_token");
-    closeMenus();
     toast.success("Signed out successfully");
     router.push("/");
   };
 
-  const navLinks = [
+  const navItems = [
     { name: "Home", href: "/" },
     { name: "Services", href: "/services" },
     { name: "How It Works", href: "/about" },
   ];
 
-  const avatarUrl = session?.user?.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(session?.user?.name || "User")}&background=1A432A&color=fff&bold=true`;
+  const dashboardLink = session ? `/dashboard/${session.user.role || "customer"}` : "#";
+  const avatarUrl =
+    session?.user?.image ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(
+      session?.user?.name || "User"
+    )}&background=ff5722&color=fff&bold=true`;
 
   return (
-    <header className="sticky top-0 z-50 w-full">
-      <div className="h-[80px] w-full lg:h-[100px]" aria-hidden="true" />
-
-      <div className="pointer-events-none absolute inset-x-0 top-0">
+    <header className="fixed top-0 left-0 w-full z-50 bg-transparent pt-3 sm:pt-4 transition-all duration-300">
+      <div className="max-w-[1500px] mx-auto px-3 sm:px-6 lg:px-8">
+        {/* Always Light Transparent Glass Pill */}
         <div
-          className={`hidden transition-all duration-500 ease-in-out lg:block ${
-            scrolled ? "opacity-0 translate-y-[-10px]" : "opacity-100 translate-y-0"
+          className={`h-18 sm:h-20 flex items-center justify-between gap-2 sm:gap-4 px-3.5 sm:px-6 lg:px-7 rounded-full border transition-all duration-500 relative ${
+            scrolled
+              ? "bg-[#111111]/45 backdrop-blur-md border-[#ff5722]/30 shadow-[0_10px_30px_rgba(0,0,0,0.22),0_0_20px_rgba(255,87,34,0.12)]"
+              : "bg-[#111111]/25 backdrop-blur-xs border-white/20 shadow-[0_8px_24px_rgba(0,0,0,0.14),inset_0_1px_0_rgba(255,255,255,0.16)]"
           }`}
         >
-          <div className="absolute inset-x-0 top-0 h-[14px] bg-white" />
-          <div className="absolute left-0 top-0 h-[100px] w-[350px]">
-            <svg viewBox="0 0 400 112" preserveAspectRatio="none" className="h-full w-full" aria-hidden="true">
-              <path d={LOBE_PATH} fill="#ffffff" />
-            </svg>
+          {/* Icon + Logo Side by Side Without Box */}
+          <Link
+            href="/"
+            className="flex items-center gap-2 sm:gap-2.5 shrink-0 group transition-transform duration-300 hover:scale-[1.02]"
+          >
+            <Image
+              src="/icon-whiteTheme.png"
+              alt="FixLab Icon"
+              width={36}
+              height={36}
+              className="object-contain w-7 h-7 sm:w-8 sm:h-8 shrink-0"
+            />
+            <Image
+              src="/fixlab-logo-white-transparent.png"
+              alt="FixLab Logo"
+              width={118}
+              height={40}
+              className="object-contain h-6 sm:h-8 w-auto shrink-0"
+            />
+          </Link>
+
+          {/* Desktop Center Menu */}
+          <nav className="hidden md:flex items-center gap-1 lg:gap-2 bg-white/10 backdrop-blur-xs px-2.5 py-1.5 rounded-full border border-white/20 xl:absolute xl:left-1/2 xl:-translate-x-1/2 shrink-0">
+            {navItems.map((item) => {
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={`group relative overflow-hidden px-4 lg:px-5 py-2.5 rounded-full text-sm font-bold transition-all duration-300 whitespace-nowrap ${
+                    isActive
+                      ? "bg-[#ff5722] text-white shadow-lg shadow-[#ff5722]/30"
+                      : "text-gray-200 hover:text-white"
+                  }`}
+                >
+                  <span className="relative z-10">{item.name}</span>
+
+                  {/* Left-to-Right Loading Bar Underline on Hover (Non-Active Items) */}
+                  {!isActive && (
+                    <span className="absolute left-0 bottom-0 h-[2.5px] w-0 group-hover:w-full bg-gradient-to-r from-[#ff5722] via-[#ff7043] to-[#ff8a65] shadow-[0_0_10px_rgba(255,87,34,0.9)] transition-all duration-300 ease-out" />
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Desktop Auth / Profile */}
+          <div className="hidden md:flex items-center gap-2.5 lg:gap-3 shrink-0">
+            {!session ? (
+              <>
+                <Link
+                  href="/sign-in"
+                  className="text-sm font-bold text-gray-200 hover:text-white transition-colors px-3.5 lg:px-4 py-2.5 rounded-full bg-white/5 hover:bg-white/15 border border-white/15 whitespace-nowrap"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/sign-up"
+                  className="bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] hover:from-[#e64a19] hover:to-[#ff5722] text-white px-5 lg:px-6 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 transition-all duration-300 hover:-translate-y-0.5 shadow-[0_8px_22px_rgba(255,87,34,0.38)] whitespace-nowrap"
+                >
+                  Sign Up <ArrowRight size={16} />
+                </Link>
+              </>
+            ) : (
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="flex items-center gap-2.5 bg-white/10 border border-white/20 hover:border-[#ff5722]/45 py-1.5 px-2 pr-3.5 rounded-full hover:bg-white/15 transition-all duration-300 backdrop-blur-xs cursor-pointer"
+                >
+                  <img
+                    src={avatarUrl}
+                    alt="User"
+                    className="w-8 h-8 rounded-full object-cover border border-[#ff5722]/50 shrink-0"
+                  />
+                  <span className="text-sm font-bold text-white truncate max-w-[150px] lg:max-w-[190px]">
+                    {session.user.name}
+                  </span>
+                  <ChevronDown
+                    size={14}
+                    className={`text-gray-200 transition-transform duration-300 shrink-0 ${
+                      isDropdownOpen ? "rotate-180 text-[#ff5722]" : ""
+                    }`}
+                  />
+                </button>
+
+                {/* Dropdown Menu */}
+                {isDropdownOpen && (
+                  <div className="absolute right-0 mt-3 w-68 bg-[#161616]/85 backdrop-blur-xl rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/20 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                    <div className="p-4 border-b border-white/15 bg-gradient-to-r from-[#ff5722]/20 via-white/[0.04] to-transparent">
+                      <p className="font-extrabold text-white truncate">
+                        {session.user.name}
+                      </p>
+                      <p className="text-xs text-gray-300 truncate mb-2.5">
+                        {session.user.email}
+                      </p>
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#ff5722]/25 text-[#ff8a65] text-[10px] font-extrabold uppercase rounded-full tracking-wider border border-[#ff5722]/35">
+                        <Sparkles size={10} /> {session.user.role}
+                      </span>
+                    </div>
+                    <div className="p-2 flex flex-col gap-1">
+                      <Link
+                        href={dashboardLink}
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="flex items-center gap-3 px-3.5 py-2.5 text-sm font-bold text-gray-200 hover:bg-white/10 hover:text-white rounded-2xl transition-colors"
+                      >
+                        <LayoutDashboard size={18} className="text-[#ff5722]" /> Dashboard
+                      </Link>
+                      <Link
+                        href="/dashboard/profile"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="flex items-center gap-3 px-3.5 py-2.5 text-sm font-bold text-gray-200 hover:bg-white/10 hover:text-white rounded-2xl transition-colors"
+                      >
+                        <User size={18} className="text-[#ff5722]" /> Update Profile
+                      </Link>
+                      <div className="h-px bg-white/15 my-1" />
+                      <button
+                        onClick={handleSignOut}
+                        className="flex items-center gap-3 px-3.5 py-2.5 text-sm font-bold text-red-300 hover:bg-red-500/15 hover:text-red-200 rounded-2xl transition-colors w-full text-left cursor-pointer"
+                      >
+                        <LogOut size={18} /> Sign Out
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-          <div className="absolute right-0 top-0 h-[100px] w-[350px]">
-            <svg viewBox="0 0 400 112" preserveAspectRatio="none" className="h-full w-full -scale-x-100" aria-hidden="true">
-              <path d={LOBE_PATH} fill="#ffffff" />
-            </svg>
-          </div>
+
+          {/* Mobile Menu Toggle Button */}
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="md:hidden p-2 text-white bg-white/10 hover:bg-white/20 rounded-full border border-white/20 transition-colors cursor-pointer shrink-0"
+            aria-label="Toggle Menu"
+          >
+            {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
         </div>
 
-        <div
-          className={`absolute inset-x-0 top-3 mx-auto hidden h-[64px] w-[calc(100%-32px)] max-w-[1200px] rounded-full border border-white/70 bg-white/80 shadow-[0_20px_50px_-24px_rgba(15,20,10,0.45)] backdrop-blur-xl backdrop-saturate-150 transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] lg:block ${
-            scrolled 
-              ? "visible translate-y-0 opacity-100 scale-100" 
-              : "invisible -translate-y-4 opacity-0 scale-95"
-          }`}
-        />
+        {/* Mobile Menu Dropdown */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden mt-3 bg-[#161616]/85 backdrop-blur-xl rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.45)] border border-white/20 overflow-hidden animate-in fade-in slide-in-from-top-4">
+            <nav className="flex flex-col p-4 gap-2">
+              {navItems.map((item) => {
+                const isActive = pathname === item.href;
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={`relative px-4 py-3 rounded-2xl text-sm font-bold transition-colors ${
+                      isActive
+                        ? "bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white shadow-md shadow-[#ff5722]/25"
+                        : "text-gray-200 hover:bg-white/10 hover:text-white"
+                    }`}
+                  >
+                    {item.name}
+                  </Link>
+                );
+              })}
 
-        <div
-          className={`absolute inset-x-0 top-0 h-[80px] rounded-b-[26px] border-b border-black/[0.04] shadow-[0_18px_34px_-28px_rgba(15,20,10,0.5)] transition-all duration-500 ease-in-out lg:hidden ${
-            scrolled ? "bg-white/90 backdrop-blur-xl" : "bg-white"
-          }`}
-        />
-      </div>
+              <hr className="my-2 border-white/15" />
 
-      <div
-        className={`absolute inset-x-0 top-0 mx-auto flex w-full items-center justify-between px-5 transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] lg:px-10 ${
-          scrolled
-            ? "lg:top-3 lg:h-[64px] lg:w-[calc(100%-32px)] lg:max-w-[1200px] lg:px-7 h-[80px]"
-            : "lg:h-[100px] h-[80px]"
-        }`}
-      >
-        <Link
-          href="/"
-          onClick={closeMenus}
-          className="relative flex shrink-0 items-center gap-2 transition-transform duration-500"
-        >
-          <Image
-            src="/fixlab-icon.png"
-            alt="Icon"
-            width={40}
-            height={40}
-            priority
-            style={{ width: "auto", height: "auto" }}
-            className={`rounded-[22%] object-contain mix-blend-multiply transition-all duration-500 ${
-              scrolled ? "h-8 w-8" : "h-10 w-10"
-            }`}
-          />
-          <Image
-            src="/fixlab-logo.png"
-            alt="FixLab"
-            width={120}
-            height={40}
-            priority
-            style={{ width: "auto", height: "auto" }}
-            className={`mix-blend-multiply transition-all duration-500 ${
-              scrolled ? "h-[24px]" : "h-[32px]"
-            }`}
-          />
-        </Link>
-
-        <nav className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-9 lg:flex xl:gap-12">
-          {navLinks.map((link) => {
-            const active = pathname === link.href;
-            return (
-              <Link
-                key={link.name}
-                href={link.href}
-                onClick={closeMenus}
-                className={`relative text-[15px] font-medium tracking-[-0.01em] transition-colors duration-300 ${
-                  active ? "text-[#1F241D]" : "text-[#3C3C37] hover:text-[#3E5C3A]"
-                }`}
-              >
-                {link.name}
-                <span
-                  className={`absolute -bottom-2.5 left-1/2 h-[3px] w-[3px] -translate-x-1/2 rounded-full bg-[#3E5C3A] transition-opacity duration-300 ${
-                    active ? "opacity-100" : "opacity-0"
-                  }`}
-                />
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="relative z-10 hidden items-center gap-3 lg:flex">
-          {!session ? (
-            <>
-              <Link
-                href="/sign-in"
-                className="mr-2 text-[15px] font-medium text-[#3C3C37] transition-colors hover:text-[#2C3620]"
-              >
-                Sign In
-              </Link>
-              <Link
-                href="/sign-up"
-                className={`rounded-full bg-[#2C3620] px-6 text-[14px] font-medium leading-[22px] text-white shadow-[0_16px_28px_-18px_rgba(24,32,16,0.85)] transition-all duration-500 ease-in-out hover:bg-[#212B18] ${
-                  scrolled ? "py-[10px]" : "py-[12px]"
-                }`}
-              >
-                Sign Up
-              </Link>
-              <Link
-                href="/services"
-                aria-label="Browse services"
-                className={`flex items-center justify-center rounded-full bg-[#2C3620] text-white shadow-[0_16px_28px_-18px_rgba(24,32,16,0.85)] transition-all duration-500 ease-in-out hover:rotate-45 hover:bg-[#212B18] ${
-                  scrolled ? "h-10 w-10" : "h-[46px] w-[46px]"
-                }`}
-              >
-                <ArrowUpRight size={18} strokeWidth={2} />
-              </Link>
-            </>
-          ) : (
-            <div className="relative">
-              <button
-                onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="flex items-center gap-2 rounded-full ring-1 ring-black/5 transition-all duration-300 hover:ring-black/10"
-              >
-                <img
-                  src={avatarUrl}
-                  alt="User"
-                  className={`rounded-full object-cover transition-all duration-500 ${
-                    scrolled ? "h-9 w-9" : "h-11 w-11"
-                  }`}
-                />
-              </button>
-
-              {dropdownOpen && (
-                <div className="absolute right-0 mt-3 flex w-60 flex-col rounded-2xl border border-black/5 bg-white p-2 shadow-[0_30px_60px_-30px_rgba(15,20,10,0.45)]">
-                  <div className="border-b border-black/5 px-4 py-3">
-                    <p className="truncate text-sm font-semibold text-[#1F241D]">
-                      {session.user.name}
-                    </p>
-                    <span className="mt-1 inline-block rounded-full bg-[#EDF0E8] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#3E5C3A]">
-                      {session.user.role}
-                    </span>
+              {!session ? (
+                <div className="flex flex-col gap-2.5">
+                  <Link
+                    href="/sign-in"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="px-4 py-3 text-center text-sm font-bold text-white bg-white/5 border border-white/20 rounded-2xl hover:bg-white/15 transition-colors"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    href="/sign-up"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="px-4 py-3 text-center text-sm font-bold bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white rounded-2xl shadow-md shadow-[#ff5722]/30"
+                  >
+                    Sign Up
+                  </Link>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 border border-white/15 mb-1">
+                    <img
+                      src={avatarUrl}
+                      alt="User"
+                      className="w-10 h-10 rounded-full border border-[#ff5722]/40 shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <p className="font-bold text-sm text-white truncate">
+                        {session.user.name}
+                      </p>
+                      <p className="text-[10px] uppercase font-extrabold text-[#ff8a65] tracking-wider">
+                        {session.user.role}
+                      </p>
+                    </div>
                   </div>
                   <Link
-                    href={`/dashboard/${session.user.role}`}
-                    onClick={closeMenus}
-                    className="mt-1 flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-[#3C3C37] transition-colors hover:bg-[#F4F3EE]"
+                    href={dashboardLink}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="px-4 py-3 text-sm font-bold text-gray-200 hover:bg-white/10 hover:text-white rounded-2xl flex items-center gap-3 transition-colors"
                   >
-                    <LayoutDashboard size={16} /> Dashboard
+                    <LayoutDashboard size={18} className="text-[#ff5722]" /> Dashboard
                   </Link>
                   <Link
                     href="/dashboard/profile"
-                    onClick={closeMenus}
-                    className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-[#3C3C37] transition-colors hover:bg-[#F4F3EE]"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="px-4 py-3 text-sm font-bold text-gray-200 hover:bg-white/10 hover:text-white rounded-2xl flex items-center gap-3 transition-colors"
                   >
-                    <User size={16} /> Update Profile
+                    <User size={18} className="text-[#ff5722]" /> Profile
                   </Link>
                   <button
-                    onClick={handleSignOut}
-                    className="mt-1 flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-[#B4472F] transition-colors hover:bg-[#FBF0EC]"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      handleSignOut();
+                    }}
+                    className="px-4 py-3 text-sm font-bold text-red-300 hover:bg-red-500/15 hover:text-red-200 rounded-2xl flex items-center gap-3 text-left transition-colors cursor-pointer"
                   >
-                    <LogOut size={16} /> Sign Out
+                    <LogOut size={18} /> Sign Out
                   </button>
                 </div>
               )}
-            </div>
-          )}
-        </div>
-
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="relative z-10 flex h-11 w-11 items-center justify-center rounded-full text-[#1F241D] transition-colors hover:bg-[#F4F3EE] lg:hidden"
-        >
-          {isOpen ? <X size={22} /> : <Menu size={22} />}
-        </button>
-      </div>
-
-      {isOpen && (
-        <div className="absolute inset-x-0 top-[80px] z-10 px-4 lg:hidden animate-in fade-in slide-in-from-top-4 duration-300">
-          <div className="rounded-[26px] border border-black/5 bg-white p-3 shadow-[0_30px_60px_-30px_rgba(15,20,10,0.45)]">
-            {navLinks.map((link) => (
-              <Link
-                key={link.name}
-                href={link.href}
-                onClick={closeMenus}
-                className={`block rounded-2xl px-4 py-3 text-[15px] font-medium transition-colors hover:bg-[#F4F3EE] ${
-                  pathname === link.href ? "text-[#3E5C3A]" : "text-[#3C3C37]"
-                }`}
-              >
-                {link.name}
-              </Link>
-            ))}
-            <div className="mt-2 flex flex-col gap-2 border-t border-black/5 px-1 pt-3">
-              {!session ? (
-                <>
-                  <Link href="/sign-in" onClick={closeMenus} className="rounded-2xl px-4 py-3 text-center text-[15px] font-medium text-[#3C3C37] hover:bg-[#F4F3EE]">Sign In</Link>
-                  <Link href="/sign-up" onClick={closeMenus} className="rounded-full bg-[#2C3620] px-6 py-3.5 text-center text-[15px] font-medium text-white">Sign Up</Link>
-                </>
-              ) : (
-                <>
-                  <Link href={`/dashboard/${session.user.role}`} onClick={closeMenus} className="rounded-2xl px-4 py-3 text-[15px] font-medium text-[#3C3C37] hover:bg-[#F4F3EE]">Dashboard</Link>
-                  <button onClick={handleSignOut} className="rounded-2xl px-4 py-3 text-left text-[15px] font-medium text-[#B4472F] hover:bg-[#FBF0EC]">Sign Out</button>
-                </>
-              )}
-            </div>
+            </nav>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </header>
   );
 }

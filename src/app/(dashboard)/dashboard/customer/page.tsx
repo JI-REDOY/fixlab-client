@@ -1,42 +1,172 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { fetchApi } from "@/lib/api";
-import { FileText, Clock, CheckCircle, Loader2 } from "lucide-react";
+import {
+  FileText,
+  Clock,
+  CheckCircle,
+  Loader2,
+  Sparkles,
+  ArrowUpRight,
+} from "lucide-react";
+
+interface CustomerStats {
+  total: number;
+  active: number;
+  completed: number;
+}
 
 export default function CustomerDashboard() {
-  const [stats, setStats] = useState({ total: 0, active: 0, completed: 0 });
+  const [stats, setStats] = useState<CustomerStats>({
+    total: 0,
+    active: 0,
+    completed: 0,
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let active = true;
+
     fetchApi("/api/bookings/customer/stats")
-      .then((data) => setStats(data))
-      .catch((err) => console.error(err))
-      .finally(() => setLoading(false));
+      .then((data) => {
+        if (!active) return;
+        const source = data?.stats ?? data?.data ?? data ?? {};
+        setStats({
+          total: Number(source.total ?? 0),
+          active: Number(source.active ?? 0),
+          completed: Number(source.completed ?? 0),
+        });
+      })
+      .catch((err) => {
+        console.error(err);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
-  if (loading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-fixlab-green" size={40} /></div>;
+  if (loading) {
+    return (
+      <div className="flex justify-center py-24">
+        <Loader2 className="animate-spin text-[#ff5722]" size={42} />
+      </div>
+    );
+  }
+
+  const statCards = [
+    {
+      label: "Total Requests",
+      sublabel: "All repair bookings",
+      value: stats.total,
+      icon: FileText,
+      href: "/dashboard/customer/bookings",
+      iconBox:
+        "bg-white/75 text-[#ff5722] border-white/85 shadow-[6px_6px_14px_rgba(15,23,42,0.07),-6px_-6px_14px_rgba(255,255,255,0.95)] group-hover:bg-[#ff5722] group-hover:text-white group-hover:border-[#ff5722]",
+    },
+    {
+      label: "Active Jobs",
+      sublabel: "In progress or scheduled",
+      value: stats.active,
+      icon: Clock,
+      href: "/dashboard/customer/bookings",
+      iconBox:
+        "bg-white/75 text-amber-600 border-white/85 shadow-[6px_6px_14px_rgba(15,23,42,0.07),-6px_-6px_14px_rgba(255,255,255,0.95)] group-hover:bg-[#ff5722] group-hover:text-white group-hover:border-[#ff5722]",
+    },
+    {
+      label: "Completed Jobs",
+      sublabel: "Successfully fixed",
+      value: stats.completed,
+      icon: CheckCircle,
+      href: "/dashboard/customer/payments",
+      iconBox:
+        "bg-white/75 text-emerald-600 border-white/85 shadow-[6px_6px_14px_rgba(15,23,42,0.07),-6px_-6px_14px_rgba(255,255,255,0.95)] group-hover:bg-[#ff5722] group-hover:text-white group-hover:border-[#ff5722]",
+    },
+  ];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-extrabold text-fixlab-charcoal">Dashboard Overview</h1>
-        <p className="text-fixlab-gray text-sm">Welcome back! Here is a summary of your repair jobs.</p>
+    <div className="space-y-8 relative z-10">
+      {/* Soft Glass Header Banner */}
+      <div className="relative overflow-hidden rounded-[2rem] bg-white/45 hover:bg-white/55 backdrop-blur-xs border border-white/80 p-6 sm:p-8 shadow-[10px_10px_24px_rgba(15,23,42,0.08),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.95)] transition-all duration-300">
+        <div className="absolute -right-14 -top-14 w-52 h-52 rounded-full bg-[#ff5722]/12 blur-2xl pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <span className="inline-flex items-center gap-1.5 py-1 px-3.5 rounded-full bg-white/75 border border-white/85 text-[#ff5722] font-extrabold tracking-wider uppercase text-[11px] mb-3 shadow-[4px_4px_10px_rgba(15,23,42,0.06),-4px_-4px_10px_rgba(255,255,255,0.95)]">
+              <Sparkles size={12} /> Customer Portal
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+              Dashboard <span className="text-[#ff5722]">Overview</span>
+            </h1>
+            <p className="text-gray-700 text-sm font-medium mt-1">
+              Welcome back! Here is a summary of your repair jobs.
+            </p>
+          </div>
+
+          <Link
+            href="/services"
+            className="inline-flex items-center justify-center gap-1.5 px-5 py-3 rounded-full bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white text-xs sm:text-sm font-extrabold border border-[#ff5722]/30 shadow-[6px_6px_16px_rgba(255,87,34,0.3),-4px_-4px_12px_rgba(255,255,255,0.85)] hover:from-[#e64a19] hover:to-[#ff5722] transition-all shrink-0 self-start sm:self-center"
+          >
+            <span>Book a Repair</span>
+            <ArrowUpRight size={16} />
+          </Link>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-500 flex items-center justify-center"><FileText size={28} /></div>
-          <div><p className="text-2xl font-extrabold text-fixlab-charcoal">{stats.total}</p><p className="text-sm font-medium text-fixlab-gray">Total Requests</p></div>
-        </div>
-        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center"><Clock size={28} /></div>
-          <div><p className="text-2xl font-extrabold text-fixlab-charcoal">{stats.active}</p><p className="text-sm font-medium text-fixlab-gray">Active Jobs</p></div>
-        </div>
-        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-green-50 text-green-500 flex items-center justify-center"><CheckCircle size={28} /></div>
-          <div><p className="text-2xl font-extrabold text-fixlab-charcoal">{stats.completed}</p><p className="text-sm font-medium text-fixlab-gray">Completed Jobs</p></div>
-        </div>
+      {/* Soft Glass Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 sm:gap-6">
+        {statCards.map((card) => {
+          const IconComponent = card.icon;
+
+          return (
+            <Link
+              key={card.label}
+              href={card.href}
+              className="group relative overflow-hidden bg-white/45 hover:bg-white/60 backdrop-blur-xs p-6 rounded-[2rem] border border-white/80 hover:border-[#ff5722]/50 shadow-[10px_10px_24px_rgba(15,23,42,0.08),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.95)] hover:shadow-[12px_12px_28px_rgba(255,87,34,0.14),-10px_-10px_24px_rgba(255,255,255,0.96)] transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between"
+            >
+              {/* Subdued Hover Shine */}
+              <div className="absolute inset-0 z-10 bg-gradient-to-tr from-transparent via-white/25 to-transparent -translate-x-[150%] group-hover:translate-x-[150%] transition-transform duration-[1.1s] ease-in-out pointer-events-none" />
+
+              <div className="relative z-20 flex items-center justify-between gap-4 mb-5">
+                <div
+                  className={`w-14 h-14 rounded-2xl border flex items-center justify-center transition-all duration-300 shrink-0 ${card.iconBox}`}
+                >
+                  <IconComponent size={26} />
+                </div>
+
+                <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-white/75 border border-white/85 shadow-[4px_4px_10px_rgba(15,23,42,0.05),-4px_-4px_10px_rgba(255,255,255,0.95)] text-xs font-bold text-gray-700 group-hover:text-[#ff5722] group-hover:border-[#ff5722]/35 transition-colors">
+                  <span>View</span>
+                  <ArrowUpRight
+                    size={14}
+                    className="transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                  />
+                </span>
+              </div>
+
+              <div className="relative z-20">
+                <p className="text-3xl font-extrabold text-gray-900 tracking-tight">
+                  {card.value}
+                </p>
+                <p className="text-sm font-bold text-gray-800 mt-1">
+                  {card.label}
+                </p>
+                <p className="text-xs font-medium text-gray-600 mt-0.5">
+                  {card.sublabel}
+                </p>
+              </div>
+
+              {/* Sliding Orange Accent Line */}
+              <div className="relative z-20 w-full h-[3px] bg-black/5 rounded-full overflow-hidden mt-5 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.08),inset_-2px_-2px_4px_rgba(255,255,255,0.9)]">
+                <div className="h-full w-0 bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] transition-all duration-300 group-hover:w-full" />
+              </div>
+            </Link>
+          );
+        })}
       </div>
     </div>
   );
