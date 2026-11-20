@@ -15,7 +15,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/CustomToast";
 
 export default function Navbar() {
   const pathname = usePathname();

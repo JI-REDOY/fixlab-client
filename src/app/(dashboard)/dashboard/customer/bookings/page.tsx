@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/CustomToast";
 import {
   CreditCard,
   Loader2,

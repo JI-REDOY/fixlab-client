@@ -13,7 +13,7 @@ import {
   ShieldCheck,
   ToggleRight,
 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/CustomToast";
 import { useState, useEffect, useCallback } from "react";
 import { fetchApi } from "@/lib/api";
 

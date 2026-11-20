@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/CustomToast";
 import Link from "next/link";
 import { CheckCircle, Loader2 } from "lucide-react";
 import { fetchApi } from "@/lib/api";

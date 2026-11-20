@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { X, Loader2, UploadCloud } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/CustomToast";
 import { authClient } from "@/lib/auth-client";
 import { fetchApi } from "@/lib/api";
 

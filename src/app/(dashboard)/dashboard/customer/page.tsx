@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { authClient } from "@/lib/auth-client";
 import { fetchApi } from "@/lib/api";
 import {
   FileText,
@@ -19,6 +21,9 @@ interface CustomerStats {
 }
 
 export default function CustomerDashboard() {
+  const router = useRouter();
+  const { data: session, isPending } = authClient.useSession();
+
   const [stats, setStats] = useState<CustomerStats>({
     total: 0,
     active: 0,
@@ -26,8 +31,23 @@ export default function CustomerDashboard() {
   });
   const [loading, setLoading] = useState(true);
 
+  const userRole = ((session?.user as any)?.role || "customer") as string;
+
   useEffect(() => {
+    if (isPending) return;
+
+    if (!session?.user) {
+      setLoading(false);
+      return;
+    }
+
+    if (userRole !== "customer") {
+      router.replace(`/dashboard/${userRole}`);
+      return;
+    }
+
     let active = true;
+    setLoading(true);
 
     fetchApi("/api/bookings/customer/stats")
       .then((data) => {
@@ -49,9 +69,9 @@ export default function CustomerDashboard() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [isPending, session, userRole, router]);
 
-  if (loading) {
+  if (isPending || loading || (session?.user && userRole !== "customer")) {
     return (
       <div className="flex justify-center py-24">
         <Loader2 className="animate-spin text-[#ff5722]" size={42} />

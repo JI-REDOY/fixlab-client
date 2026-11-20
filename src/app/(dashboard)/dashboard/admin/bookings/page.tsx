@@ -1,83 +1,240 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { fetchApi } from "@/lib/api";
-import { Loader2 } from "lucide-react";
+import {
+  Loader2,
+  Sparkles,
+  Wrench,
+  User,
+  UserCheck,
+  Calendar,
+  Activity,
+  DollarSign,
+} from "lucide-react";
+
+const filterTabs = [
+  "all",
+  "requested",
+  "accepted",
+  "in-progress",
+  "completed",
+  "cancelled",
+];
+
+interface AdminBookingItem {
+  _id: string;
+  serviceTitle?: string;
+  customerName?: string;
+  technicianName?: string;
+  preferredDate?: string;
+  createdAt?: string;
+  status: string;
+  basePrice?: number | string;
+  finalAmount?: number | string;
+}
 
 export default function AdminBookingsPage() {
-  const [bookings, setBookings] = useState<any[]>([]);
+  const [bookings, setBookings] = useState<AdminBookingItem[]>([]);
   const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const loadBookings = useCallback(() => {
+    setLoading(true);
     fetchApi("/api/admin/bookings")
-      .then((data) => setBookings(data))
-      .catch((err) => console.error(err))
+      .then((data) => {
+        const list = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.bookings)
+          ? data.bookings
+          : Array.isArray(data?.data)
+          ? data.data
+          : [];
+        setBookings(list);
+      })
+      .catch((err) => {
+        console.error(err);
+        setBookings([]);
+      })
       .finally(() => setLoading(false));
   }, []);
 
-  const filteredBookings = filter === "all" ? bookings : bookings.filter(b => b.status === filter);
+  useEffect(() => {
+    loadBookings();
+  }, [loadBookings]);
 
-  if (loading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-fixlab-green" size={40} /></div>;
+  const filteredBookings =
+    filter === "all"
+      ? bookings
+      : bookings.filter((b) => b.status === filter);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-24">
+        <Loader2 className="animate-spin text-[#ff5722]" size={42} />
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-extrabold text-fixlab-charcoal">All Bookings</h1>
-          <p className="text-fixlab-gray text-sm">Monitor every repair job across the platform.</p>
-        </div>
-        <div className="flex gap-2 bg-white p-1 rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
-          {["all", "requested", "accepted", "in-progress", "completed", "cancelled"].map((s) => (
-            <button
-              key={s}
-              onClick={() => setFilter(s)}
-              className={`px-4 py-2 rounded-lg text-xs font-bold capitalize whitespace-nowrap transition-all ${
-                filter === s ? "bg-fixlab-green text-white" : "text-fixlab-gray hover:bg-fixlab-cream"
-              }`}
-            >
-              {s.replace("-", " ")}
-            </button>
-          ))}
+    <div className="space-y-8 relative z-10">
+      {/* Transparent Soft UI Header & Filter Banner */}
+      <div className="relative overflow-hidden rounded-[2rem] bg-transparent hover:bg-white/5 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/12 p-6 sm:p-8 shadow-[14px_14px_28px_rgba(15,23,42,0.13),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)] transition-all duration-300">
+        <div className="relative z-10 flex flex-col lg:flex-row lg:justify-between lg:items-center gap-5">
+          <div>
+            <span className="inline-flex items-center gap-1.5 py-1 px-3.5 rounded-full bg-white/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-[#ff5722]/25 text-[#ff5722] font-extrabold tracking-wider uppercase text-[11px] mb-3 shadow-[5px_5px_12px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)]">
+              <Sparkles size={12} /> Platform Bookings
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+              All <span className="text-[#ff5722]">Bookings</span>
+            </h1>
+            <p className="text-gray-700 text-sm font-medium mt-1">
+              Monitor every repair job across the platform.
+            </p>
+          </div>
+
+          {/* Transparent Soft UI Filter Tabs */}
+          <div className="flex gap-1.5 bg-white/10 backdrop-blur-[1px] p-1.5 rounded-2xl border border-white/90 ring-1 ring-slate-900/10 shadow-[6px_6px_14px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)] overflow-x-auto self-start lg:self-center">
+            {filterTabs.map((s) => {
+              const isActive = filter === s;
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setFilter(s)}
+                  className={`px-4 py-2 rounded-xl text-xs font-extrabold capitalize whitespace-nowrap transition-all cursor-pointer ${
+                    isActive
+                      ? "bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white shadow-[4px_4px_10px_rgba(255,87,34,0.3)]"
+                      : "text-gray-800 hover:bg-white/20"
+                  }`}
+                >
+                  {s.replace("-", " ")}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+      {/* Transparent Soft UI Table Card */}
+      <div className="relative overflow-hidden bg-transparent backdrop-blur-[1px] rounded-[2rem] border border-white/85 ring-1 ring-slate-900/12 shadow-[14px_14px_30px_rgba(15,23,42,0.14),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)]">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-fixlab-cream border-b border-gray-100">
-                <th className="px-6 py-4 text-xs font-bold text-fixlab-gray uppercase">Service</th>
-                <th className="px-6 py-4 text-xs font-bold text-fixlab-gray uppercase">Customer</th>
-                <th className="px-6 py-4 text-xs font-bold text-fixlab-gray uppercase">Technician</th>
-                <th className="px-6 py-4 text-xs font-bold text-fixlab-gray uppercase">Date</th>
-                <th className="px-6 py-4 text-xs font-bold text-fixlab-gray uppercase">Status</th>
-                <th className="px-6 py-4 text-xs font-bold text-fixlab-gray uppercase">Amount</th>
+              <tr className="bg-white/10 border-b border-white/80">
+                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Wrench size={13} className="text-[#ff5722]" />
+                    Service
+                  </span>
+                </th>
+                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
+                  <span className="inline-flex items-center gap-1.5">
+                    <User size={13} className="text-[#ff5722]" />
+                    Customer
+                  </span>
+                </th>
+                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
+                  <span className="inline-flex items-center gap-1.5">
+                    <UserCheck size={13} className="text-[#ff5722]" />
+                    Technician
+                  </span>
+                </th>
+                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Calendar size={13} className="text-[#ff5722]" />
+                    Date
+                  </span>
+                </th>
+                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Activity size={13} className="text-[#ff5722]" />
+                    Status
+                  </span>
+                </th>
+                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
+                  <span className="inline-flex items-center gap-1.5">
+                    <DollarSign size={13} className="text-[#ff5722]" />
+                    Amount
+                  </span>
+                </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
-              {filteredBookings.length === 0 && (
-                <tr><td colSpan={6} className="text-center py-10 text-fixlab-gray">No bookings found.</td></tr>
-              )}
-              {filteredBookings.map((b) => (
-                <tr key={b._id} className="hover:bg-gray-50/50">
-                  <td className="px-6 py-4 font-bold text-sm text-fixlab-charcoal">{b.serviceTitle}</td>
-                  <td className="px-6 py-4 text-sm text-fixlab-gray">{b.customerName}</td>
-                  <td className="px-6 py-4 text-sm text-fixlab-gray">{b.technicianName}</td>
-                  <td className="px-6 py-4 text-sm text-fixlab-gray">{new Date(b.preferredDate).toLocaleDateString()}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-3 py-1 text-xs font-bold rounded-full capitalize ${
-                      b.status === "completed" ? "bg-green-100 text-green-700" :
-                      b.status === "in-progress" ? "bg-amber-100 text-amber-700" : 
-                      b.status === "accepted" ? "bg-indigo-100 text-indigo-700" : 
-                      "bg-blue-100 text-blue-700"
-                    }`}>
-                      {b.status.replace("-", " ")}
-                    </span>
+
+            <tbody className="divide-y divide-white/65">
+              {filteredBookings.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-16 text-center">
+                    <div className="inline-flex flex-col items-center justify-center p-6 rounded-[1.75rem] bg-white/10 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/12 shadow-[10px_10px_22px_rgba(15,23,42,0.1),-8px_-8px_18px_rgba(255,255,255,0.92)]">
+                      <div className="w-14 h-14 rounded-2xl bg-white/15 border border-white/90 ring-1 ring-[#ff5722]/25 flex items-center justify-center text-[#ff5722] mb-3 shadow-[5px_5px_12px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)]">
+                        <Wrench size={24} />
+                      </div>
+                      <p className="text-sm font-extrabold text-gray-900">
+                        No bookings found.
+                      </p>
+                      <p className="text-xs font-medium text-gray-700 mt-1">
+                        Bookings matching this filter will appear here.
+                      </p>
+                    </div>
                   </td>
-                  <td className="px-6 py-4 text-sm font-bold text-fixlab-green">${b.finalAmount || b.basePrice}</td>
                 </tr>
-              ))}
+              ) : (
+                filteredBookings.map((b) => {
+                  const dateValue = b.preferredDate || b.createdAt;
+                  const formattedDate = dateValue
+                    ? new Date(dateValue).toLocaleDateString()
+                    : "—";
+                  const amount = b.finalAmount ?? b.basePrice ?? 0;
+
+                  const statusBadgeStyle =
+                    b.status === "completed"
+                      ? "bg-emerald-500/12 text-emerald-700 ring-emerald-500/25"
+                      : b.status === "in-progress"
+                      ? "bg-amber-500/15 text-amber-800 ring-amber-500/30"
+                      : b.status === "accepted"
+                      ? "bg-indigo-500/12 text-indigo-800 ring-indigo-500/30"
+                      : b.status === "cancelled"
+                      ? "bg-red-500/12 text-red-700 ring-red-500/25"
+                      : "bg-blue-500/12 text-blue-700 ring-blue-500/25";
+
+                  return (
+                    <tr
+                      key={b._id}
+                      className="group hover:bg-white/10 transition-all duration-200"
+                    >
+                      <td className="px-6 py-4 font-extrabold text-sm text-gray-900 group-hover:text-[#ff5722] transition-colors">
+                        {b.serviceTitle || "Repair Service"}
+                      </td>
+
+                      <td className="px-6 py-4 text-sm font-semibold text-gray-800 whitespace-nowrap">
+                        {b.customerName || "Customer"}
+                      </td>
+
+                      <td className="px-6 py-4 text-sm font-semibold text-gray-800 whitespace-nowrap">
+                        {b.technicianName || "Technician"}
+                      </td>
+
+                      <td className="px-6 py-4 text-sm font-semibold text-gray-800 whitespace-nowrap">
+                        {formattedDate}
+                      </td>
+
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`inline-block px-3.5 py-1 text-xs font-extrabold rounded-full capitalize bg-white/15 backdrop-blur-[1px] border border-white/90 ring-1 shadow-[3px_3px_8px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)] ${statusBadgeStyle}`}
+                        >
+                          {b.status.replace("-", " ")}
+                        </span>
+                      </td>
+
+                      <td className="px-6 py-4 text-sm font-extrabold whitespace-nowrap">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-[#ff5722]/25 text-[#ff5722] shadow-[3px_3px_8px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)]">
+                          ${amount}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
