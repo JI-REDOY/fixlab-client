@@ -187,14 +187,14 @@ export default function MyServicesPage() {
   }
 
   return (
-    <div className="space-y-8 relative z-10">
-      <div className="relative overflow-hidden rounded-[2rem] bg-transparent hover:bg-white/5 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/12 p-6 sm:p-8 shadow-[14px_14px_28px_rgba(15,23,42,0.13),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)] transition-all duration-300">
+    <div className="space-y-8 relative z-10 min-w-0">
+      <div className="relative overflow-hidden rounded-[2rem] bg-transparent hover:bg-white/5 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/12 p-5 sm:p-8 shadow-[14px_14px_28px_rgba(15,23,42,0.13),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)] transition-all duration-300">
         <div className="relative z-10 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-          <div>
+          <div className="min-w-0">
             <span className="inline-flex items-center gap-1.5 py-1 px-3.5 rounded-full bg-white/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-[#ff5722]/25 text-[#ff5722] font-extrabold tracking-wider uppercase text-[11px] mb-3 shadow-[5px_5px_12px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)]">
               <Sparkles size={12} /> Service Catalog
             </span>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight break-words">
               My <span className="text-[#ff5722]">Services</span>
             </h1>
             <p className="text-gray-700 text-sm font-medium mt-1">
@@ -204,7 +204,7 @@ export default function MyServicesPage() {
 
           <Link
             href="/dashboard/technician/add-service"
-            className="inline-flex items-center justify-center gap-1.5 px-5 py-3 bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] hover:from-[#e64a19] hover:to-[#ff5722] text-white text-xs sm:text-sm font-extrabold rounded-full border border-[#ff5722]/40 shadow-[6px_6px_16px_rgba(255,87,34,0.34),-4px_-4px_10px_rgba(255,255,255,0.85)] transition-all shrink-0 self-start sm:self-center"
+            className="inline-flex items-center justify-center gap-1.5 px-5 py-3 bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] hover:from-[#e64a19] hover:to-[#ff5722] text-white text-xs sm:text-sm font-extrabold rounded-full border border-[#ff5722]/40 shadow-[6px_6px_16px_rgba(255,87,34,0.34),-4px_-4px_10px_rgba(255,255,255,0.85)] transition-all shrink-0 w-full sm:w-auto self-start sm:self-center"
           >
             <Plus size={16} />
             <span>Add New</span>
@@ -212,111 +212,77 @@ export default function MyServicesPage() {
         </div>
       </div>
 
-      <div className="relative overflow-hidden bg-transparent backdrop-blur-[1px] rounded-[2rem] border border-white/85 ring-1 ring-slate-900/12 p-2 sm:p-4 shadow-[14px_14px_30px_rgba(15,23,42,0.14),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)]">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-white/10 border-b border-white/80">
-                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
-                  <span className="inline-flex items-center gap-1.5">
-                    <Wrench size={13} className="text-[#ff5722]" />
-                    Service
-                  </span>
-                </th>
-                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
-                  <span className="inline-flex items-center gap-1.5">
-                    <DollarSign size={13} className="text-[#ff5722]" />
-                    Price
-                  </span>
-                </th>
-                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
-                  <span className="inline-flex items-center gap-1.5">
-                    <ShieldCheck size={13} className="text-[#ff5722]" />
-                    Status
-                  </span>
-                </th>
-                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
-                  <span className="inline-flex items-center gap-1.5">
-                    <ToggleRight size={13} className="text-[#ff5722]" />
-                    Available
-                  </span>
-                </th>
-                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider text-right">
-                  Actions
-                </th>
-              </tr>
-            </thead>
+      <div className="relative overflow-hidden bg-transparent backdrop-blur-[1px] rounded-[2rem] border border-white/85 ring-1 ring-slate-900/12 p-3 sm:p-4 shadow-[14px_14px_30px_rgba(15,23,42,0.14),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)]">
+        {paginatedServices.length === 0 ? (
+          <div className="px-4 py-14 text-center">
+            <div className="inline-flex flex-col items-center justify-center p-6 rounded-[1.75rem] bg-white/10 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/12 shadow-[10px_10px_22px_rgba(15,23,42,0.1),-8px_-8px_18px_rgba(255,255,255,0.92)]">
+              <div className="w-14 h-14 rounded-2xl bg-white/15 border border-white/90 ring-1 ring-[#ff5722]/25 flex items-center justify-center text-[#ff5722] mb-3 shadow-[5px_5px_12px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)]">
+                <Wrench size={24} />
+              </div>
+              <p className="text-sm font-extrabold text-gray-900">
+                No services found. Add one!
+              </p>
+              <p className="text-xs font-medium text-gray-700 mt-1">
+                Create a repair service to start receiving bookings.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Mobile Card View */}
+            <div className="grid grid-cols-1 gap-3.5 md:hidden">
+              {paginatedServices.map((service) => {
+                const isAvailable = Boolean(service.isAvailable);
+                const isBusy = busyId === service._id;
+                const statusStyle =
+                  service.approvalStatus === "approved"
+                    ? "bg-emerald-500/12 text-emerald-700 ring-emerald-500/25"
+                    : service.approvalStatus === "pending"
+                    ? "bg-amber-500/15 text-amber-800 ring-amber-500/30"
+                    : "bg-red-500/12 text-red-700 ring-red-500/25";
 
-            <tbody className="divide-y divide-white/65">
-              {paginatedServices.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-16 text-center">
-                    <div className="inline-flex flex-col items-center justify-center p-6 rounded-[1.75rem] bg-white/10 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/12 shadow-[10px_10px_22px_rgba(15,23,42,0.1),-8px_-8px_18px_rgba(255,255,255,0.92)]">
-                      <div className="w-14 h-14 rounded-2xl bg-white/15 border border-white/90 ring-1 ring-[#ff5722]/25 flex items-center justify-center text-[#ff5722] mb-3 shadow-[5px_5px_12px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)]">
-                        <Wrench size={24} />
+                return (
+                  <div
+                    key={service._id}
+                    className="rounded-[1.5rem] bg-white/10 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/10 p-4 shadow-[6px_6px_16px_rgba(15,23,42,0.08),-4px_-4px_10px_rgba(255,255,255,0.88)] space-y-3.5"
+                  >
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="relative w-12 h-12 rounded-2xl overflow-hidden shrink-0 border border-white/90 ring-1 ring-slate-900/12 bg-white/10 shadow-[4px_4px_10px_rgba(15,23,42,0.1),-3px_-3px_8px_rgba(255,255,255,0.92)]">
+                        <Image
+                          src={service.image || "/icon-whiteTheme.png"}
+                          alt={service.title || "Service"}
+                          fill
+                          sizes="48px"
+                          className="object-cover"
+                        />
                       </div>
-                      <p className="text-sm font-extrabold text-gray-900">
-                        No services found. Add one!
-                      </p>
-                      <p className="text-xs font-medium text-gray-700 mt-1">
-                        Create a repair service to start receiving bookings.
-                      </p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                paginatedServices.map((service) => {
-                  const isAvailable = Boolean(service.isAvailable);
-                  const isBusy = busyId === service._id;
-                  const statusStyle =
-                    service.approvalStatus === "approved"
-                      ? "bg-emerald-500/12 text-emerald-700 ring-emerald-500/25"
-                      : service.approvalStatus === "pending"
-                      ? "bg-amber-500/15 text-amber-800 ring-amber-500/30"
-                      : "bg-red-500/12 text-red-700 ring-red-500/25";
 
-                  return (
-                    <tr
-                      key={service._id}
-                      className="group hover:bg-white/10 transition-all duration-200"
-                    >
-                      <td className="px-6 py-3.5">
-                        <div className="flex items-center gap-3.5">
-                          <div className="relative w-12 h-12 rounded-2xl overflow-hidden shrink-0 border border-white/90 ring-1 ring-slate-900/12 bg-white/10 shadow-[5px_5px_12px_rgba(15,23,42,0.1),-4px_-4px_10px_rgba(255,255,255,0.92)]">
-                            <Image
-                              src={service.image || "/icon-whiteTheme.png"}
-                              alt={service.title || "Service"}
-                              fill
-                              sizes="48px"
-                              className="object-cover"
-                            />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-extrabold text-sm text-gray-900 group-hover:text-[#ff5722] transition-colors line-clamp-1">
-                              {service.title || "Repair Service"}
-                            </p>
-                            <p className="text-xs font-semibold text-gray-700 mt-0.5">
-                              {service.category || "General"}
-                            </p>
-                          </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-extrabold text-sm text-gray-900 break-words">
+                          {service.title || "Repair Service"}
+                        </p>
+                        <div className="flex items-center flex-wrap gap-2 mt-1">
+                          <span className="text-xs font-semibold text-gray-700">
+                            {service.category || "General"}
+                          </span>
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-white/20 border border-white/90 ring-1 ring-[#ff5722]/25 text-xs font-extrabold text-[#ff5722]">
+                            ${service.basePrice ?? 0}
+                          </span>
                         </div>
-                      </td>
+                      </div>
+                    </div>
 
-                      <td className="px-6 py-3.5 text-sm font-extrabold whitespace-nowrap">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-[#ff5722]/25 text-[#ff5722] shadow-[3px_3px_8px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)]">
-                          ${service.basePrice ?? 0}
+                    <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-white/75">
+                      <span
+                        className={`inline-block px-3 py-1 text-xs font-extrabold rounded-full capitalize bg-white/15 backdrop-blur-[1px] border border-white/90 ring-1 ${statusStyle}`}
+                      >
+                        {service.approvalStatus || "pending"}
+                      </span>
+
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-bold text-gray-700">
+                          Available
                         </span>
-                      </td>
-
-                      <td className="px-6 py-3.5 whitespace-nowrap">
-                        <span
-                          className={`inline-block px-3.5 py-1 text-xs font-extrabold rounded-full capitalize bg-white/15 backdrop-blur-[1px] border border-white/90 ring-1 shadow-[3px_3px_8px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)] ${statusStyle}`}
-                        >
-                          {service.approvalStatus || "pending"}
-                        </span>
-                      </td>
-
-                      <td className="px-6 py-3.5 whitespace-nowrap">
                         <button
                           type="button"
                           disabled={isBusy}
@@ -336,36 +302,173 @@ export default function MyServicesPage() {
                             }`}
                           />
                         </button>
-                      </td>
+                      </div>
+                    </div>
 
-                      <td className="px-6 py-3.5 text-right whitespace-nowrap">
-                        <div className="inline-flex items-center justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={() => openEditModal(service)}
-                            title="Edit service"
-                            className="p-2 text-blue-700 bg-white/15 hover:bg-blue-500/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-blue-500/25 rounded-xl shadow-[4px_4px_10px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)] transition-all cursor-pointer"
+                    <div className="flex items-center justify-end gap-2 pt-2.5 border-t border-white/75">
+                      <button
+                        type="button"
+                        onClick={() => openEditModal(service)}
+                        title="Edit service"
+                        className="px-3.5 py-2 text-xs font-extrabold text-blue-700 bg-white/15 hover:bg-blue-500/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-blue-500/25 rounded-xl inline-flex items-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <Edit size={14} />
+                        <span>Edit</span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isBusy}
+                        onClick={() => setServiceToDelete(service)}
+                        title="Delete service"
+                        className="px-3.5 py-2 text-xs font-extrabold text-red-600 bg-white/15 hover:bg-red-500/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-red-500/25 rounded-xl inline-flex items-center gap-1.5 transition-all disabled:opacity-60 cursor-pointer"
+                      >
+                        <Trash2 size={14} />
+                        <span>Delete</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-white/10 border-b border-white/80">
+                    <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
+                      <span className="inline-flex items-center gap-1.5">
+                        <Wrench size={13} className="text-[#ff5722]" />
+                        Service
+                      </span>
+                    </th>
+                    <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
+                      <span className="inline-flex items-center gap-1.5">
+                        <DollarSign size={13} className="text-[#ff5722]" />
+                        Price
+                      </span>
+                    </th>
+                    <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
+                      <span className="inline-flex items-center gap-1.5">
+                        <ShieldCheck size={13} className="text-[#ff5722]" />
+                        Status
+                      </span>
+                    </th>
+                    <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
+                      <span className="inline-flex items-center gap-1.5">
+                        <ToggleRight size={13} className="text-[#ff5722]" />
+                        Available
+                      </span>
+                    </th>
+                    <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider text-right">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-white/65">
+                  {paginatedServices.map((service) => {
+                    const isAvailable = Boolean(service.isAvailable);
+                    const isBusy = busyId === service._id;
+                    const statusStyle =
+                      service.approvalStatus === "approved"
+                        ? "bg-emerald-500/12 text-emerald-700 ring-emerald-500/25"
+                        : service.approvalStatus === "pending"
+                        ? "bg-amber-500/15 text-amber-800 ring-amber-500/30"
+                        : "bg-red-500/12 text-red-700 ring-red-500/25";
+
+                    return (
+                      <tr
+                        key={service._id}
+                        className="group hover:bg-white/10 transition-all duration-200"
+                      >
+                        <td className="px-6 py-3.5">
+                          <div className="flex items-center gap-3.5">
+                            <div className="relative w-12 h-12 rounded-2xl overflow-hidden shrink-0 border border-white/90 ring-1 ring-slate-900/12 bg-white/10 shadow-[5px_5px_12px_rgba(15,23,42,0.1),-4px_-4px_10px_rgba(255,255,255,0.92)]">
+                              <Image
+                                src={service.image || "/icon-whiteTheme.png"}
+                                alt={service.title || "Service"}
+                                fill
+                                sizes="48px"
+                                className="object-cover"
+                              />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-extrabold text-sm text-gray-900 group-hover:text-[#ff5722] transition-colors line-clamp-1">
+                                {service.title || "Repair Service"}
+                              </p>
+                              <p className="text-xs font-semibold text-gray-700 mt-0.5">
+                                {service.category || "General"}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="px-6 py-3.5 text-sm font-extrabold whitespace-nowrap">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-[#ff5722]/25 text-[#ff5722] shadow-[3px_3px_8px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)]">
+                            ${service.basePrice ?? 0}
+                          </span>
+                        </td>
+
+                        <td className="px-6 py-3.5 whitespace-nowrap">
+                          <span
+                            className={`inline-block px-3.5 py-1 text-xs font-extrabold rounded-full capitalize bg-white/15 backdrop-blur-[1px] border border-white/90 ring-1 shadow-[3px_3px_8px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)] ${statusStyle}`}
                           >
-                            <Edit size={16} />
-                          </button>
+                            {service.approvalStatus || "pending"}
+                          </span>
+                        </td>
+
+                        <td className="px-6 py-3.5 whitespace-nowrap">
                           <button
                             type="button"
                             disabled={isBusy}
-                            onClick={() => setServiceToDelete(service)}
-                            title="Delete service"
-                            className="p-2 text-red-600 bg-white/15 hover:bg-red-500/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-red-500/25 rounded-xl shadow-[4px_4px_10px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)] transition-all disabled:opacity-60 cursor-pointer"
+                            onClick={() =>
+                              toggleAvailability(service._id, isAvailable)
+                            }
+                            aria-label="Toggle availability"
+                            className={`w-11 h-6 rounded-full relative transition-all border border-white/80 cursor-pointer disabled:opacity-60 ${
+                              isAvailable
+                                ? "bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] shadow-[0_3px_10px_rgba(255,87,34,0.35)]"
+                                : "bg-slate-300/80 shadow-[inset_1px_1px_3px_rgba(15,23,42,0.15)]"
+                            }`}
                           >
-                            <Trash2 size={16} />
+                            <span
+                              className={`absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white shadow-sm transition-all ${
+                                isAvailable ? "left-5.5" : "left-0.5"
+                              }`}
+                            />
                           </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                        </td>
+
+                        <td className="px-6 py-3.5 text-right whitespace-nowrap">
+                          <div className="inline-flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => openEditModal(service)}
+                              title="Edit service"
+                              className="p-2 text-blue-700 bg-white/15 hover:bg-blue-500/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-blue-500/25 rounded-xl shadow-[4px_4px_10px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)] transition-all cursor-pointer"
+                            >
+                              <Edit size={16} />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={isBusy}
+                              onClick={() => setServiceToDelete(service)}
+                              title="Delete service"
+                              className="p-2 text-red-600 bg-white/15 hover:bg-red-500/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-red-500/25 rounded-xl shadow-[4px_4px_10px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)] transition-all disabled:opacity-60 cursor-pointer"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
 
         <div className="px-4 pb-2">
           <Pagination
@@ -381,7 +484,7 @@ export default function MyServicesPage() {
       {/* Edit Modal */}
       {editingService && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[2px] p-4">
-          <div className="relative w-full max-w-lg rounded-[2rem] bg-white/90 backdrop-blur-xl border border-white ring-1 ring-slate-900/15 p-6 shadow-[16px_16px_34px_rgba(15,23,42,0.22)]">
+          <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-[2rem] bg-white/90 backdrop-blur-xl border border-white ring-1 ring-slate-900/15 p-5 sm:p-6 shadow-[16px_16px_34px_rgba(15,23,42,0.22)]">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-extrabold text-gray-900">
                 Edit <span className="text-[#ff5722]">Service</span>

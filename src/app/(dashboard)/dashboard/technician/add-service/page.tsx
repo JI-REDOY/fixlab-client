@@ -20,7 +20,8 @@ import {
 } from "lucide-react";
 import { fetchApi } from "@/lib/api";
 
-const IMGBB_API_KEY = process.env.NEXT_PUBLIC_IMGBB_API_KEY; // .env.local এ যোগ করুন
+const IMGBB_API_KEY = process.env.NEXT_PUBLIC_IMGBB_API_KEY;
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
 export default function AddServicePage() {
   const router = useRouter();
@@ -43,12 +44,21 @@ export default function AddServicePage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      toast.error("Image size must be 5MB or less");
+      return;
+    }
+
+    if (!IMGBB_API_KEY) {
+      toast.error("ImgBB API key is not configured");
+      return;
+    }
+
     setUploading(true);
     const reader = new FileReader();
     reader.onloadend = () => setImagePreview(reader.result as string);
     reader.readAsDataURL(file);
 
-    // ImgBB Upload
     const imgData = new FormData();
     imgData.append("image", file);
 
@@ -61,13 +71,15 @@ export default function AddServicePage() {
         }
       );
       const data = await res.json();
-      if (data.success) {
+      if (data.success && data?.data?.url) {
         setFormData((prev) => ({ ...prev, image: data.data.url }));
         toast.success("Image uploaded!");
       } else {
+        setImagePreview(null);
         toast.error("Image upload failed");
       }
-    } catch (err) {
+    } catch {
+      setImagePreview(null);
       toast.error("Image upload failed");
     } finally {
       setUploading(false);
@@ -97,16 +109,16 @@ export default function AddServicePage() {
   };
 
   const inputClass =
-    "w-full px-4 py-3 rounded-2xl bg-white/15 focus:bg-white/25 backdrop-blur-[1px] border border-white/90 ring-1 ring-slate-900/12 text-sm font-semibold text-gray-900 placeholder-gray-500 outline-none focus:ring-2 focus:ring-[#ff5722]/35 focus:border-[#ff5722]/50 shadow-[inset_1px_1px_3px_rgba(15,23,42,0.07),4px_4px_10px_rgba(15,23,42,0.06)] transition-all";
+    "w-full min-w-0 px-4 py-3 rounded-2xl bg-white/15 focus:bg-white/25 backdrop-blur-[1px] border border-white/90 ring-1 ring-slate-900/12 text-sm font-semibold text-gray-900 placeholder-gray-500 outline-none focus:ring-2 focus:ring-[#ff5722]/35 focus:border-[#ff5722]/50 shadow-[inset_1px_1px_3px_rgba(15,23,42,0.07),4px_4px_10px_rgba(15,23,42,0.06)] transition-all";
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8 relative z-10">
+    <div className="max-w-3xl mx-auto space-y-6 sm:space-y-8 relative z-10 min-w-0">
       {/* Transparent Soft UI Header Banner */}
-      <div className="relative overflow-hidden rounded-[2rem] bg-transparent hover:bg-white/5 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/12 p-6 sm:p-8 shadow-[14px_14px_28px_rgba(15,23,42,0.13),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)] transition-all duration-300">
+      <div className="relative overflow-hidden rounded-[2rem] bg-transparent hover:bg-white/5 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/12 p-5 sm:p-8 shadow-[14px_14px_28px_rgba(15,23,42,0.13),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)] transition-all duration-300">
         <span className="inline-flex items-center gap-1.5 py-1 px-3.5 rounded-full bg-white/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-[#ff5722]/25 text-[#ff5722] font-extrabold tracking-wider uppercase text-[11px] mb-3 shadow-[5px_5px_12px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)]">
           <Sparkles size={12} /> New Listing
         </span>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight break-words">
           Add a New <span className="text-[#ff5722]">Service</span>
         </h1>
         <p className="text-gray-700 text-sm font-medium mt-1">
@@ -117,15 +129,15 @@ export default function AddServicePage() {
       {/* Transparent Soft UI Form Card */}
       <form
         onSubmit={handleSubmit}
-        className="relative overflow-hidden bg-transparent backdrop-blur-[1px] p-6 sm:p-8 rounded-[2rem] border border-white/85 ring-1 ring-slate-900/12 shadow-[14px_14px_30px_rgba(15,23,42,0.14),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)] space-y-6"
+        className="relative overflow-hidden bg-transparent backdrop-blur-[1px] p-5 sm:p-8 rounded-[2rem] border border-white/85 ring-1 ring-slate-900/12 shadow-[14px_14px_30px_rgba(15,23,42,0.14),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)] space-y-5 sm:space-y-6"
       >
         {/* Image Upload */}
-        <div>
+        <div className="min-w-0">
           <label className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-gray-800 mb-2">
-            <UploadCloud size={13} className="text-[#ff5722]" />
+            <UploadCloud size={13} className="text-[#ff5722] shrink-0" />
             <span>Service Image</span>
           </label>
-          <div className="border-2 border-dashed border-white/90 ring-1 ring-slate-900/12 bg-white/10 hover:bg-white/20 backdrop-blur-[1px] rounded-[1.5rem] p-8 flex flex-col items-center justify-center text-center transition-all relative cursor-pointer shadow-[inset_1px_1px_3px_rgba(15,23,42,0.06),5px_5px_12px_rgba(15,23,42,0.08)]">
+          <div className="border-2 border-dashed border-white/90 ring-1 ring-slate-900/12 bg-white/10 hover:bg-white/20 backdrop-blur-[1px] rounded-[1.5rem] p-6 sm:p-8 flex flex-col items-center justify-center text-center transition-all relative cursor-pointer shadow-[inset_1px_1px_3px_rgba(15,23,42,0.06),5px_5px_12px_rgba(15,23,42,0.08)]">
             <input
               type="file"
               accept="image/*"
@@ -138,7 +150,7 @@ export default function AddServicePage() {
               <img
                 src={imagePreview}
                 alt="Preview"
-                className="h-32 object-contain rounded-2xl border border-white/90 shadow-[4px_4px_10px_rgba(15,23,42,0.1)]"
+                className="h-28 sm:h-32 max-w-full object-contain rounded-2xl border border-white/90 shadow-[4px_4px_10px_rgba(15,23,42,0.1)]"
               />
             ) : (
               <>
@@ -156,10 +168,10 @@ export default function AddServicePage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          <div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+          <div className="min-w-0">
             <label className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-gray-800 mb-2">
-              <Wrench size={13} className="text-[#ff5722]" />
+              <Wrench size={13} className="text-[#ff5722] shrink-0" />
               <span>Service Title</span>
             </label>
             <input
@@ -174,9 +186,9 @@ export default function AddServicePage() {
             />
           </div>
 
-          <div>
+          <div className="min-w-0">
             <label className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-gray-800 mb-2">
-              <Layers size={13} className="text-[#ff5722]" />
+              <Layers size={13} className="text-[#ff5722] shrink-0" />
               <span>Category</span>
             </label>
             <select
@@ -186,20 +198,20 @@ export default function AddServicePage() {
               }
               className={`${inputClass} cursor-pointer`}
             >
-              <option>Smartphone</option>
-              <option>Laptop & PC</option>
-              <option>AC</option>
-              <option>Refrigerator</option>
-              <option>TV</option>
-              <option>Washing Machine</option>
-              <option>Electrical</option>
+              <option className="bg-white text-gray-900">Smartphone</option>
+              <option className="bg-white text-gray-900">Laptop & PC</option>
+              <option className="bg-white text-gray-900">AC</option>
+              <option className="bg-white text-gray-900">Refrigerator</option>
+              <option className="bg-white text-gray-900">TV</option>
+              <option className="bg-white text-gray-900">Washing Machine</option>
+              <option className="bg-white text-gray-900">Electrical</option>
             </select>
           </div>
         </div>
 
-        <div>
+        <div className="min-w-0">
           <label className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-gray-800 mb-2">
-            <FileText size={13} className="text-[#ff5722]" />
+            <FileText size={13} className="text-[#ff5722] shrink-0" />
             <span>Description</span>
           </label>
           <textarea
@@ -214,10 +226,10 @@ export default function AddServicePage() {
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          <div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+          <div className="min-w-0">
             <label className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-gray-800 mb-2">
-              <DollarSign size={13} className="text-[#ff5722]" />
+              <DollarSign size={13} className="text-[#ff5722] shrink-0" />
               <span>Base Price ($)</span>
             </label>
             <input
@@ -233,9 +245,9 @@ export default function AddServicePage() {
             />
           </div>
 
-          <div>
+          <div className="min-w-0">
             <label className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-gray-800 mb-2">
-              <Clock size={13} className="text-[#ff5722]" />
+              <Clock size={13} className="text-[#ff5722] shrink-0" />
               <span>Estimated Duration</span>
             </label>
             <input
@@ -251,10 +263,10 @@ export default function AddServicePage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          <div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+          <div className="min-w-0">
             <label className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-gray-800 mb-2">
-              <Settings size={13} className="text-[#ff5722]" />
+              <Settings size={13} className="text-[#ff5722] shrink-0" />
               <span>Service Mode</span>
             </label>
             <select
@@ -264,14 +276,14 @@ export default function AddServicePage() {
               }
               className={`${inputClass} cursor-pointer`}
             >
-              <option>Home Visit</option>
-              <option>Shop Drop-off</option>
+              <option className="bg-white text-gray-900">Home Visit</option>
+              <option className="bg-white text-gray-900">Shop Drop-off</option>
             </select>
           </div>
 
-          <div>
+          <div className="min-w-0">
             <label className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-gray-800 mb-2">
-              <MapPin size={13} className="text-[#ff5722]" />
+              <MapPin size={13} className="text-[#ff5722] shrink-0" />
               <span>Service Area</span>
             </label>
             <input
@@ -289,29 +301,29 @@ export default function AddServicePage() {
 
         <div className="pt-5 border-t border-white/75">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
+            <div className="min-w-0">
               <label className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">
-                <User size={12} className="text-[#ff5722]" />
+                <User size={12} className="text-[#ff5722] shrink-0" />
                 <span>Technician Name</span>
               </label>
               <input
                 type="text"
                 readOnly
                 value={session?.user?.name || ""}
-                className="w-full px-4 py-3 rounded-2xl bg-white/10 backdrop-blur-[1px] border border-white/75 ring-1 ring-slate-900/8 text-sm font-semibold text-gray-600 cursor-not-allowed shadow-[inset_1px_1px_3px_rgba(15,23,42,0.06)]"
+                className="w-full min-w-0 px-4 py-3 rounded-2xl bg-white/10 backdrop-blur-[1px] border border-white/75 ring-1 ring-slate-900/8 text-sm font-semibold text-gray-600 cursor-not-allowed shadow-[inset_1px_1px_3px_rgba(15,23,42,0.06)]"
               />
             </div>
 
-            <div>
+            <div className="min-w-0">
               <label className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">
-                <Mail size={12} className="text-[#ff5722]" />
+                <Mail size={12} className="text-[#ff5722] shrink-0" />
                 <span>Technician Email</span>
               </label>
               <input
                 type="email"
                 readOnly
                 value={session?.user?.email || ""}
-                className="w-full px-4 py-3 rounded-2xl bg-white/10 backdrop-blur-[1px] border border-white/75 ring-1 ring-slate-900/8 text-sm font-semibold text-gray-600 cursor-not-allowed shadow-[inset_1px_1px_3px_rgba(15,23,42,0.06)]"
+                className="w-full min-w-0 px-4 py-3 rounded-2xl bg-white/10 backdrop-blur-[1px] border border-white/75 ring-1 ring-slate-900/8 text-sm font-semibold text-gray-600 cursor-not-allowed shadow-[inset_1px_1px_3px_rgba(15,23,42,0.06)]"
               />
             </div>
           </div>
@@ -320,7 +332,7 @@ export default function AddServicePage() {
         <button
           type="submit"
           disabled={loading || uploading}
-          className="w-full py-4 bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] hover:from-[#e64a19] hover:to-[#ff5722] text-white text-sm font-extrabold rounded-full transition-all shadow-[6px_6px_16px_rgba(255,87,34,0.34),-4px_-4px_10px_rgba(255,255,255,0.85)] disabled:opacity-65 mt-2 flex items-center justify-center gap-2 cursor-pointer"
+          className="w-full py-3.5 sm:py-4 bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] hover:from-[#e64a19] hover:to-[#ff5722] text-white text-sm font-extrabold rounded-full transition-all shadow-[6px_6px_16px_rgba(255,87,34,0.34),-4px_-4px_10px_rgba(255,255,255,0.85)] disabled:opacity-65 mt-2 flex items-center justify-center gap-2 cursor-pointer"
         >
           {loading && <Loader2 className="animate-spin" size={20} />}
           <span>{loading ? "Adding Service..." : "Add Service"}</span>

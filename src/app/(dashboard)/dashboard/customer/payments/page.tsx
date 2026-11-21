@@ -214,12 +214,12 @@ export default function PaymentHistoryPage() {
   }
 
   return (
-    <div className="space-y-7 relative">
-      <div className="relative overflow-hidden rounded-[2rem] bg-white/15 backdrop-blur-md border border-white/55 p-6 sm:p-8 shadow-[0_10px_28px_rgba(0,0,0,0.03),inset_0_1px_0_rgba(255,255,255,0.65)]">
+    <div className="space-y-7 relative min-w-0">
+      <div className="relative overflow-hidden rounded-[2rem] bg-white/15 backdrop-blur-md border border-white/55 p-5 sm:p-8 shadow-[0_10px_28px_rgba(0,0,0,0.03),inset_0_1px_0_rgba(255,255,255,0.65)]">
         <div className="absolute -right-12 -top-12 w-48 h-48 rounded-full bg-[#ff5722]/12 blur-2xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
+          <div className="min-w-0">
             <span className="inline-flex items-center gap-1.5 py-1 px-3.5 rounded-full bg-[#ff5722]/10 border border-[#ff5722]/20 text-[#ff5722] font-extrabold tracking-wider uppercase text-[11px] mb-3">
               <Sparkles size={12} /> Billing & Receipts
             </span>
@@ -231,7 +231,7 @@ export default function PaymentHistoryPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3 self-start sm:self-center">
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 self-start sm:self-center">
             <div className="px-4 py-2.5 rounded-2xl bg-white/25 backdrop-blur-xs border border-white/60 shadow-2xs">
               <p className="text-[10px] font-extrabold uppercase tracking-wider text-gray-600">
                 Transactions
@@ -253,133 +253,216 @@ export default function PaymentHistoryPage() {
         </div>
       </div>
 
-      <div className="relative overflow-hidden bg-white/15 backdrop-blur-md rounded-[2rem] border border-white/55 p-2 sm:p-4 shadow-[0_10px_28px_rgba(0,0,0,0.03),inset_0_1px_0_rgba(255,255,255,0.65)]">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-white/25 border-b border-white/50">
-                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-700 uppercase tracking-wider">
-                  <span className="inline-flex items-center gap-1.5">
-                    <Receipt size={13} className="text-[#ff5722]" />
-                    Transaction ID
-                  </span>
-                </th>
-                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-700 uppercase tracking-wider">
-                  <span className="inline-flex items-center gap-1.5">
-                    <Wrench size={13} className="text-[#ff5722]" />
-                    Service
-                  </span>
-                </th>
-                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-700 uppercase tracking-wider">
-                  <span className="inline-flex items-center gap-1.5">
-                    <UserCheck size={13} className="text-[#ff5722]" />
-                    Technician
-                  </span>
-                </th>
-                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-700 uppercase tracking-wider">
-                  <span className="inline-flex items-center gap-1.5">
-                    <CreditCard size={13} className="text-[#ff5722]" />
-                    Amount
-                  </span>
-                </th>
-                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-700 uppercase tracking-wider">
-                  <span className="inline-flex items-center gap-1.5">
-                    <Calendar size={13} className="text-[#ff5722]" />
-                    Date
-                  </span>
-                </th>
-                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-700 uppercase tracking-wider text-right">
-                  Receipt
-                </th>
-              </tr>
-            </thead>
+      <div className="relative overflow-hidden bg-white/15 backdrop-blur-md rounded-[2rem] border border-white/55 p-3 sm:p-4 shadow-[0_10px_28px_rgba(0,0,0,0.03),inset_0_1px_0_rgba(255,255,255,0.65)]">
+        {paginatedPayments.length === 0 ? (
+          <div className="px-4 py-14 text-center">
+            <div className="inline-flex flex-col items-center justify-center p-6 rounded-[1.75rem] bg-white/25 border border-white/60">
+              <div className="w-14 h-14 rounded-2xl bg-[#ff5722]/10 border border-[#ff5722]/20 flex items-center justify-center text-[#ff5722] mb-3">
+                <CreditCard size={24} />
+              </div>
+              <p className="text-sm font-extrabold text-gray-900">
+                No payments yet.
+              </p>
+              <p className="text-xs font-medium text-gray-600 mt-1">
+                Completed service payments will appear here.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Mobile Card View */}
+            <div className="grid grid-cols-1 gap-3.5 md:hidden">
+              {paginatedPayments.map((p, idx) => {
+                const txId = p.transactionId || p.stripePaymentIntentId || "";
+                const rowKey = p._id || p.id || txId || idx;
+                const numericAmount = Number(p.amount ?? 0);
+                const displayAmount = Number.isNaN(numericAmount)
+                  ? p.amount || "0.00"
+                  : numericAmount.toFixed(2);
+                const isTechPro = isPaymentTechnicianPro(p);
 
-            <tbody className="divide-y divide-white/40">
-              {paginatedPayments.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-16 text-center">
-                    <div className="inline-flex flex-col items-center justify-center">
-                      <div className="w-14 h-14 rounded-2xl bg-[#ff5722]/10 border border-[#ff5722]/20 flex items-center justify-center text-[#ff5722] mb-3">
-                        <CreditCard size={24} />
+                return (
+                  <div
+                    key={rowKey}
+                    className="rounded-[1.5rem] bg-white/35 backdrop-blur-xs border border-white/70 p-4 shadow-2xs space-y-3"
+                  >
+                    <div className="flex items-start justify-between gap-2.5">
+                      <div className="min-w-0">
+                        <p className="text-sm font-extrabold text-gray-900 break-words">
+                          {p.serviceTitle || "Repair Service"}
+                        </p>
+                        <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-600 mt-1">
+                          <Calendar size={12} className="text-[#ff5722] shrink-0" />
+                          <span>{formatDate(p.paidAt || p.createdAt)}</span>
+                        </div>
                       </div>
-                      <p className="text-sm font-extrabold text-gray-900">
-                        No payments yet.
-                      </p>
-                      <p className="text-xs font-medium text-gray-600 mt-1">
-                        Completed service payments will appear here.
-                      </p>
+
+                      <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#ff5722]/12 border border-[#ff5722]/25 text-xs font-extrabold text-[#ff5722] shrink-0">
+                        ${displayAmount}
+                      </span>
                     </div>
-                  </td>
-                </tr>
-              ) : (
-                paginatedPayments.map((p, idx) => {
-                  const txId = p.transactionId || p.stripePaymentIntentId || "";
-                  const rowKey = p._id || p.id || txId || idx;
-                  const numericAmount = Number(p.amount ?? 0);
-                  const displayAmount = Number.isNaN(numericAmount)
-                    ? p.amount || "0.00"
-                    : numericAmount.toFixed(2);
-                  const isTechPro = isPaymentTechnicianPro(p);
 
-                  return (
-                    <tr
-                      key={rowKey}
-                      className="group hover:bg-white/25 transition-colors duration-200"
-                    >
-                      <td className="px-6 py-3.5 text-xs sm:text-sm font-mono font-semibold text-gray-700 truncate max-w-[150px]">
-                        <span
-                          title={txId}
-                          className="px-2.5 py-1 rounded-lg bg-white/30 border border-white/50 inline-block max-w-full truncate group-hover:border-[#ff5722]/35 transition-colors"
-                        >
-                          {txId || "—"}
+                    <div className="space-y-2 pt-2.5 border-t border-white/60 text-xs">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="inline-flex items-center gap-1.5 font-bold text-gray-600 shrink-0">
+                          <UserCheck size={12} className="text-[#ff5722]" />
+                          Technician
                         </span>
-                      </td>
-
-                      <td className="px-6 py-3.5 text-sm font-extrabold text-gray-900 group-hover:text-[#ff5722] transition-colors">
-                        {p.serviceTitle || "Repair Service"}
-                      </td>
-
-                      <td className="px-6 py-3.5 text-sm font-semibold text-gray-700 whitespace-nowrap">
-                        <div className="inline-flex items-center gap-2 flex-wrap">
-                          <span>{p.technicianName || "Verified Tech"}</span>
+                        <div className="inline-flex items-center gap-1.5 min-w-0">
+                          <span className="font-bold text-gray-900 truncate">
+                            {p.technicianName || "Verified Tech"}
+                          </span>
                           {isTechPro && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white text-[10px] font-extrabold tracking-wider uppercase shadow-2xs">
-                              <Crown size={10} />
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white text-[9px] font-extrabold tracking-wider uppercase shrink-0">
+                              <Crown size={9} />
                               <span>PRO</span>
                             </span>
                           )}
                         </div>
-                      </td>
+                      </div>
 
-                      <td className="px-6 py-3.5 text-sm font-extrabold">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#ff5722]/12 border border-[#ff5722]/25 text-[#ff5722]">
-                          ${displayAmount}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="inline-flex items-center gap-1.5 font-bold text-gray-600 shrink-0">
+                          <Receipt size={12} className="text-[#ff5722]" />
+                          Txn ID
                         </span>
-                      </td>
-
-                      <td className="px-6 py-3.5 text-sm font-semibold text-gray-700 whitespace-nowrap">
-                        {formatDate(p.paidAt || p.createdAt)}
-                      </td>
-
-                      <td className="px-6 py-3.5 text-right whitespace-nowrap">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setActiveReceipt(transactionToReceipt(p))
-                          }
-                          className="px-3 py-1.5 text-xs font-extrabold text-gray-900 bg-white/75 hover:bg-white border border-white/80 ring-1 ring-slate-900/10 rounded-full inline-flex items-center gap-1 transition-all cursor-pointer"
+                        <span
+                          title={txId}
+                          className="font-mono text-[11px] font-semibold text-gray-800 truncate max-w-[175px]"
                         >
-                          <Printer size={13} className="text-[#ff5722]" />
-                          <span>Receipt</span>
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                          {txId || "—"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="pt-2.5 border-t border-white/60 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setActiveReceipt(transactionToReceipt(p))
+                        }
+                        className="w-full sm:w-auto px-3.5 py-1.5 text-xs font-extrabold text-gray-900 bg-white/80 hover:bg-white border border-white/80 ring-1 ring-slate-900/10 rounded-full inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <Printer size={13} className="text-[#ff5722]" />
+                        <span>Receipt</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-white/25 border-b border-white/50">
+                    <th className="px-6 py-4 text-[11px] font-extrabold text-gray-700 uppercase tracking-wider">
+                      <span className="inline-flex items-center gap-1.5">
+                        <Receipt size={13} className="text-[#ff5722]" />
+                        Transaction ID
+                      </span>
+                    </th>
+                    <th className="px-6 py-4 text-[11px] font-extrabold text-gray-700 uppercase tracking-wider">
+                      <span className="inline-flex items-center gap-1.5">
+                        <Wrench size={13} className="text-[#ff5722]" />
+                        Service
+                      </span>
+                    </th>
+                    <th className="px-6 py-4 text-[11px] font-extrabold text-gray-700 uppercase tracking-wider">
+                      <span className="inline-flex items-center gap-1.5">
+                        <UserCheck size={13} className="text-[#ff5722]" />
+                        Technician
+                      </span>
+                    </th>
+                    <th className="px-6 py-4 text-[11px] font-extrabold text-gray-700 uppercase tracking-wider">
+                      <span className="inline-flex items-center gap-1.5">
+                        <CreditCard size={13} className="text-[#ff5722]" />
+                        Amount
+                      </span>
+                    </th>
+                    <th className="px-6 py-4 text-[11px] font-extrabold text-gray-700 uppercase tracking-wider">
+                      <span className="inline-flex items-center gap-1.5">
+                        <Calendar size={13} className="text-[#ff5722]" />
+                        Date
+                      </span>
+                    </th>
+                    <th className="px-6 py-4 text-[11px] font-extrabold text-gray-700 uppercase tracking-wider text-right">
+                      Receipt
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-white/40">
+                  {paginatedPayments.map((p, idx) => {
+                    const txId = p.transactionId || p.stripePaymentIntentId || "";
+                    const rowKey = p._id || p.id || txId || idx;
+                    const numericAmount = Number(p.amount ?? 0);
+                    const displayAmount = Number.isNaN(numericAmount)
+                      ? p.amount || "0.00"
+                      : numericAmount.toFixed(2);
+                    const isTechPro = isPaymentTechnicianPro(p);
+
+                    return (
+                      <tr
+                        key={rowKey}
+                        className="group hover:bg-white/25 transition-colors duration-200"
+                      >
+                        <td className="px-6 py-3.5 text-xs sm:text-sm font-mono font-semibold text-gray-700 truncate max-w-[150px]">
+                          <span
+                            title={txId}
+                            className="px-2.5 py-1 rounded-lg bg-white/30 border border-white/50 inline-block max-w-full truncate group-hover:border-[#ff5722]/35 transition-colors"
+                          >
+                            {txId || "—"}
+                          </span>
+                        </td>
+
+                        <td className="px-6 py-3.5 text-sm font-extrabold text-gray-900 group-hover:text-[#ff5722] transition-colors">
+                          {p.serviceTitle || "Repair Service"}
+                        </td>
+
+                        <td className="px-6 py-3.5 text-sm font-semibold text-gray-700 whitespace-nowrap">
+                          <div className="inline-flex items-center gap-2 flex-wrap">
+                            <span>{p.technicianName || "Verified Tech"}</span>
+                            {isTechPro && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white text-[10px] font-extrabold tracking-wider uppercase shadow-2xs">
+                                <Crown size={10} />
+                                <span>PRO</span>
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        <td className="px-6 py-3.5 text-sm font-extrabold">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#ff5722]/12 border border-[#ff5722]/25 text-[#ff5722]">
+                            ${displayAmount}
+                          </span>
+                        </td>
+
+                        <td className="px-6 py-3.5 text-sm font-semibold text-gray-700 whitespace-nowrap">
+                          {formatDate(p.paidAt || p.createdAt)}
+                        </td>
+
+                        <td className="px-6 py-3.5 text-right whitespace-nowrap">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setActiveReceipt(transactionToReceipt(p))
+                            }
+                            className="px-3 py-1.5 text-xs font-extrabold text-gray-900 bg-white/75 hover:bg-white border border-white/80 ring-1 ring-slate-900/10 rounded-full inline-flex items-center gap-1 transition-all cursor-pointer"
+                          >
+                            <Printer size={13} className="text-[#ff5722]" />
+                            <span>Receipt</span>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
 
         <div className="px-4 pb-2">
           <Pagination

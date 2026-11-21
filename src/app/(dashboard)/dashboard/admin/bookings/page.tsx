@@ -185,10 +185,10 @@ export default function AdminBookingsPage() {
   }
 
   return (
-    <div className="space-y-8 relative z-10">
-      <div className="relative overflow-hidden rounded-[2rem] bg-transparent hover:bg-white/5 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/12 p-6 sm:p-8 shadow-[14px_14px_28px_rgba(15,23,42,0.13),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)] transition-all duration-300">
+    <div className="space-y-8 relative z-10 min-w-0">
+      <div className="relative overflow-hidden rounded-[2rem] bg-transparent hover:bg-white/5 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/12 p-5 sm:p-8 shadow-[14px_14px_28px_rgba(15,23,42,0.13),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)] transition-all duration-300">
         <div className="relative z-10 flex flex-col lg:flex-row lg:justify-between lg:items-center gap-5">
-          <div>
+          <div className="min-w-0">
             <span className="inline-flex items-center gap-1.5 py-1 px-3.5 rounded-full bg-white/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-[#ff5722]/25 text-[#ff5722] font-extrabold tracking-wider uppercase text-[11px] mb-3 shadow-[5px_5px_12px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)]">
               <Sparkles size={12} /> Platform Bookings
             </span>
@@ -200,7 +200,7 @@ export default function AdminBookingsPage() {
             </p>
           </div>
 
-          <div className="flex gap-1.5 bg-white/10 backdrop-blur-[1px] p-1.5 rounded-2xl border border-white/90 ring-1 ring-slate-900/10 shadow-[6px_6px_14px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)] overflow-x-auto self-start lg:self-center">
+          <div className="max-w-full flex gap-1.5 bg-white/10 backdrop-blur-[1px] p-1.5 rounded-2xl border border-white/90 ring-1 ring-slate-900/10 shadow-[6px_6px_14px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)] overflow-x-auto self-start lg:self-center">
             {filterTabs.map((s) => {
               const isActive = filter === s;
               return (
@@ -211,7 +211,7 @@ export default function AdminBookingsPage() {
                     setFilter(s);
                     setCurrentPage(1);
                   }}
-                  className={`px-4 py-2 rounded-xl text-xs font-extrabold capitalize whitespace-nowrap transition-all cursor-pointer ${
+                  className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-extrabold capitalize whitespace-nowrap transition-all cursor-pointer ${
                     isActive
                       ? "bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white shadow-[4px_4px_10px_rgba(255,87,34,0.3)]"
                       : "text-gray-800 hover:bg-white/20"
@@ -225,163 +225,268 @@ export default function AdminBookingsPage() {
         </div>
       </div>
 
-      <div className="relative overflow-hidden bg-transparent backdrop-blur-[1px] rounded-[2rem] border border-white/85 ring-1 ring-slate-900/12 p-2 sm:p-4 shadow-[14px_14px_30px_rgba(15,23,42,0.14),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)]">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-white/10 border-b border-white/80">
-                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
-                  <span className="inline-flex items-center gap-1.5">
-                    <Wrench size={13} className="text-[#ff5722]" />
-                    Service
-                  </span>
-                </th>
-                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
-                  <span className="inline-flex items-center gap-1.5">
-                    <User size={13} className="text-[#ff5722]" />
-                    Customer
-                  </span>
-                </th>
-                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
-                  <span className="inline-flex items-center gap-1.5">
-                    <UserCheck size={13} className="text-[#ff5722]" />
-                    Technician
-                  </span>
-                </th>
-                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
-                  <span className="inline-flex items-center gap-1.5">
-                    <Calendar size={13} className="text-[#ff5722]" />
-                    Date
-                  </span>
-                </th>
-                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
-                  <span className="inline-flex items-center gap-1.5">
-                    <Activity size={13} className="text-[#ff5722]" />
-                    Status
-                  </span>
-                </th>
-                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
-                  <span className="inline-flex items-center gap-1.5">
-                    <DollarSign size={13} className="text-[#ff5722]" />
-                    Amount
-                  </span>
-                </th>
-                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider text-right">
-                  Receipt
-                </th>
-              </tr>
-            </thead>
+      <div className="relative overflow-hidden bg-transparent backdrop-blur-[1px] rounded-[2rem] border border-white/85 ring-1 ring-slate-900/12 p-3 sm:p-4 shadow-[14px_14px_30px_rgba(15,23,42,0.14),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)]">
+        {paginatedBookings.length === 0 ? (
+          <div className="px-4 py-14 text-center">
+            <div className="inline-flex flex-col items-center justify-center p-6 rounded-[1.75rem] bg-white/10 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/12 shadow-[10px_10px_22px_rgba(15,23,42,0.1),-8px_-8px_18px_rgba(255,255,255,0.92)]">
+              <div className="w-14 h-14 rounded-2xl bg-white/15 border border-white/90 ring-1 ring-[#ff5722]/25 flex items-center justify-center text-[#ff5722] mb-3 shadow-[5px_5px_12px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)]">
+                <Wrench size={24} />
+              </div>
+              <p className="text-sm font-extrabold text-gray-900">
+                No bookings found.
+              </p>
+              <p className="text-xs font-medium text-gray-700 mt-1">
+                Bookings matching this filter will appear here.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Mobile Card View */}
+            <div className="grid grid-cols-1 gap-3.5 md:hidden p-1">
+              {paginatedBookings.map((b) => {
+                const dateValue = b.preferredDate || b.createdAt;
+                const formattedDate = dateValue
+                  ? new Date(dateValue).toLocaleDateString()
+                  : "—";
+                const amount = b.finalAmount ?? b.basePrice ?? 0;
+                const canPrintReceipt = [
+                  "accepted",
+                  "in-progress",
+                  "completed",
+                ].includes(b.status);
+                const isTechPro = isBookingTechnicianPro(b);
 
-            <tbody className="divide-y divide-white/65">
-              {paginatedBookings.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-16 text-center">
-                    <div className="inline-flex flex-col items-center justify-center p-6 rounded-[1.75rem] bg-white/10 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/12 shadow-[10px_10px_22px_rgba(15,23,42,0.1),-8px_-8px_18px_rgba(255,255,255,0.92)]">
-                      <div className="w-14 h-14 rounded-2xl bg-white/15 border border-white/90 ring-1 ring-[#ff5722]/25 flex items-center justify-center text-[#ff5722] mb-3 shadow-[5px_5px_12px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)]">
-                        <Wrench size={24} />
+                const statusBadgeStyle =
+                  b.status === "completed"
+                    ? "bg-emerald-500/12 text-emerald-700 ring-emerald-500/25"
+                    : b.status === "in-progress"
+                    ? "bg-amber-500/15 text-amber-800 ring-amber-500/30"
+                    : b.status === "accepted"
+                    ? "bg-indigo-500/12 text-indigo-800 ring-indigo-500/30"
+                    : b.status === "cancelled"
+                    ? "bg-red-500/12 text-red-700 ring-red-500/25"
+                    : "bg-blue-500/12 text-blue-700 ring-blue-500/25";
+
+                return (
+                  <div
+                    key={b._id}
+                    className="rounded-[1.5rem] bg-white/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-slate-900/10 p-4 shadow-[8px_8px_18px_rgba(15,23,42,0.09),-6px_-6px_14px_rgba(255,255,255,0.9)] space-y-3"
+                  >
+                    <div className="flex items-start justify-between gap-2.5">
+                      <div className="min-w-0">
+                        <p className="text-sm font-extrabold text-gray-900 break-words">
+                          {b.serviceTitle || "Repair Service"}
+                        </p>
+                        <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-700 mt-1">
+                          <Calendar size={12} className="text-[#ff5722] shrink-0" />
+                          <span>{formattedDate}</span>
+                        </div>
                       </div>
-                      <p className="text-sm font-extrabold text-gray-900">
-                        No bookings found.
-                      </p>
-                      <p className="text-xs font-medium text-gray-700 mt-1">
-                        Bookings matching this filter will appear here.
-                      </p>
+
+                      <span
+                        className={`inline-block px-3 py-1 text-[11px] font-extrabold rounded-full capitalize whitespace-nowrap bg-white/25 border border-white/90 ring-1 shrink-0 ${statusBadgeStyle}`}
+                      >
+                        {b.status.replace("-", " ")}
+                      </span>
                     </div>
-                  </td>
-                </tr>
-              ) : (
-                paginatedBookings.map((b) => {
-                  const dateValue = b.preferredDate || b.createdAt;
-                  const formattedDate = dateValue
-                    ? new Date(dateValue).toLocaleDateString()
-                    : "—";
-                  const amount = b.finalAmount ?? b.basePrice ?? 0;
-                  const canPrintReceipt = [
-                    "accepted",
-                    "in-progress",
-                    "completed",
-                  ].includes(b.status);
-                  const isTechPro = isBookingTechnicianPro(b);
 
-                  const statusBadgeStyle =
-                    b.status === "completed"
-                      ? "bg-emerald-500/12 text-emerald-700 ring-emerald-500/25"
-                      : b.status === "in-progress"
-                      ? "bg-amber-500/15 text-amber-800 ring-amber-500/30"
-                      : b.status === "accepted"
-                      ? "bg-indigo-500/12 text-indigo-800 ring-indigo-500/30"
-                      : b.status === "cancelled"
-                      ? "bg-red-500/12 text-red-700 ring-red-500/25"
-                      : "bg-blue-500/12 text-blue-700 ring-blue-500/25";
+                    <div className="grid grid-cols-1 gap-2 pt-2 border-t border-white/70 text-xs">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="inline-flex items-center gap-1.5 font-bold text-gray-600 shrink-0">
+                          <User size={12} className="text-[#ff5722]" />
+                          Customer
+                        </span>
+                        <span className="font-bold text-gray-900 truncate">
+                          {b.customerName || "Customer"}
+                        </span>
+                      </div>
 
-                  return (
-                    <tr
-                      key={b._id}
-                      className="group hover:bg-white/10 transition-all duration-200"
-                    >
-                      <td className="px-6 py-3.5 font-extrabold text-sm text-gray-900 group-hover:text-[#ff5722] transition-colors">
-                        {b.serviceTitle || "Repair Service"}
-                      </td>
-
-                      <td className="px-6 py-3.5 text-sm font-semibold text-gray-800 whitespace-nowrap">
-                        {b.customerName || "Customer"}
-                      </td>
-
-                      <td className="px-6 py-3.5 text-sm font-semibold text-gray-800 whitespace-nowrap">
-                        <div className="inline-flex items-center gap-2">
-                          <span>{b.technicianName || "Technician"}</span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="inline-flex items-center gap-1.5 font-bold text-gray-600 shrink-0">
+                          <UserCheck size={12} className="text-[#ff5722]" />
+                          Technician
+                        </span>
+                        <div className="inline-flex items-center gap-1.5 min-w-0">
+                          <span className="font-bold text-gray-900 truncate">
+                            {b.technicianName || "Technician"}
+                          </span>
                           {isTechPro && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white text-[10px] font-extrabold tracking-wider uppercase shadow-2xs">
-                              <Crown size={10} />
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white text-[9px] font-extrabold tracking-wider uppercase shrink-0">
+                              <Crown size={9} />
                               <span>PRO</span>
                             </span>
                           )}
                         </div>
-                      </td>
+                      </div>
+                    </div>
 
-                      <td className="px-6 py-3.5 text-sm font-semibold text-gray-800 whitespace-nowrap">
-                        {formattedDate}
-                      </td>
+                    <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-white/70">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-extrabold bg-white/20 border border-white/90 ring-1 ring-[#ff5722]/25 text-[#ff5722]">
+                        ${amount}
+                      </span>
 
-                      <td className="px-6 py-3.5 whitespace-nowrap">
-                        <span
-                          className={`inline-block px-3.5 py-1 text-xs font-extrabold rounded-full capitalize bg-white/15 backdrop-blur-[1px] border border-white/90 ring-1 shadow-[3px_3px_8px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)] ${statusBadgeStyle}`}
+                      {canPrintReceipt ? (
+                        <button
+                          type="button"
+                          onClick={() => setActiveReceipt(bookingToReceipt(b))}
+                          className="px-3.5 py-1.5 text-xs font-extrabold text-gray-900 bg-white/30 hover:bg-white/50 border border-white/90 ring-1 ring-slate-900/15 rounded-full inline-flex items-center gap-1.5 transition-all cursor-pointer"
                         >
-                          {b.status.replace("-", " ")}
+                          <Printer size={13} className="text-[#ff5722]" />
+                          <span>Receipt</span>
+                        </button>
+                      ) : (
+                        <span className="text-xs font-semibold text-gray-400">
+                          No Receipt
                         </span>
-                      </td>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
 
-                      <td className="px-6 py-3.5 text-sm font-extrabold whitespace-nowrap">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-[#ff5722]/25 text-[#ff5722] shadow-[3px_3px_8px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)]">
-                          ${amount}
-                        </span>
-                      </td>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-white/10 border-b border-white/80">
+                    <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
+                      <span className="inline-flex items-center gap-1.5">
+                        <Wrench size={13} className="text-[#ff5722]" />
+                        Service
+                      </span>
+                    </th>
+                    <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
+                      <span className="inline-flex items-center gap-1.5">
+                        <User size={13} className="text-[#ff5722]" />
+                        Customer
+                      </span>
+                    </th>
+                    <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
+                      <span className="inline-flex items-center gap-1.5">
+                        <UserCheck size={13} className="text-[#ff5722]" />
+                        Technician
+                      </span>
+                    </th>
+                    <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
+                      <span className="inline-flex items-center gap-1.5">
+                        <Calendar size={13} className="text-[#ff5722]" />
+                        Date
+                      </span>
+                    </th>
+                    <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
+                      <span className="inline-flex items-center gap-1.5">
+                        <Activity size={13} className="text-[#ff5722]" />
+                        Status
+                      </span>
+                    </th>
+                    <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
+                      <span className="inline-flex items-center gap-1.5">
+                        <DollarSign size={13} className="text-[#ff5722]" />
+                        Amount
+                      </span>
+                    </th>
+                    <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider text-right">
+                      Receipt
+                    </th>
+                  </tr>
+                </thead>
 
-                      <td className="px-6 py-3.5 text-right whitespace-nowrap">
-                        {canPrintReceipt ? (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setActiveReceipt(bookingToReceipt(b))
-                            }
-                            className="px-3 py-1.5 text-xs font-extrabold text-gray-900 bg-white/25 hover:bg-white/45 backdrop-blur-[1px] border border-white/90 ring-1 ring-slate-900/15 rounded-full shadow-[4px_4px_10px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)] inline-flex items-center gap-1 transition-all cursor-pointer"
+                <tbody className="divide-y divide-white/65">
+                  {paginatedBookings.map((b) => {
+                    const dateValue = b.preferredDate || b.createdAt;
+                    const formattedDate = dateValue
+                      ? new Date(dateValue).toLocaleDateString()
+                      : "—";
+                    const amount = b.finalAmount ?? b.basePrice ?? 0;
+                    const canPrintReceipt = [
+                      "accepted",
+                      "in-progress",
+                      "completed",
+                    ].includes(b.status);
+                    const isTechPro = isBookingTechnicianPro(b);
+
+                    const statusBadgeStyle =
+                      b.status === "completed"
+                        ? "bg-emerald-500/12 text-emerald-700 ring-emerald-500/25"
+                        : b.status === "in-progress"
+                        ? "bg-amber-500/15 text-amber-800 ring-amber-500/30"
+                        : b.status === "accepted"
+                        ? "bg-indigo-500/12 text-indigo-800 ring-indigo-500/30"
+                        : b.status === "cancelled"
+                        ? "bg-red-500/12 text-red-700 ring-red-500/25"
+                        : "bg-blue-500/12 text-blue-700 ring-blue-500/25";
+
+                    return (
+                      <tr
+                        key={b._id}
+                        className="group hover:bg-white/10 transition-all duration-200"
+                      >
+                        <td className="px-6 py-3.5 font-extrabold text-sm text-gray-900 group-hover:text-[#ff5722] transition-colors">
+                          {b.serviceTitle || "Repair Service"}
+                        </td>
+
+                        <td className="px-6 py-3.5 text-sm font-semibold text-gray-800 whitespace-nowrap">
+                          {b.customerName || "Customer"}
+                        </td>
+
+                        <td className="px-6 py-3.5 text-sm font-semibold text-gray-800 whitespace-nowrap">
+                          <div className="inline-flex items-center gap-2">
+                            <span>{b.technicianName || "Technician"}</span>
+                            {isTechPro && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white text-[10px] font-extrabold tracking-wider uppercase shadow-2xs">
+                                <Crown size={10} />
+                                <span>PRO</span>
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        <td className="px-6 py-3.5 text-sm font-semibold text-gray-800 whitespace-nowrap">
+                          {formattedDate}
+                        </td>
+
+                        <td className="px-6 py-3.5 whitespace-nowrap">
+                          <span
+                            className={`inline-block px-3.5 py-1 text-xs font-extrabold rounded-full capitalize bg-white/15 backdrop-blur-[1px] border border-white/90 ring-1 shadow-[3px_3px_8px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)] ${statusBadgeStyle}`}
                           >
-                            <Printer size={13} className="text-[#ff5722]" />
-                            <span>Receipt</span>
-                          </button>
-                        ) : (
-                          <span className="text-xs font-semibold text-gray-400">
-                            —
+                            {b.status.replace("-", " ")}
                           </span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                        </td>
+
+                        <td className="px-6 py-3.5 text-sm font-extrabold whitespace-nowrap">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-[#ff5722]/25 text-[#ff5722] shadow-[3px_3px_8px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)]">
+                            ${amount}
+                          </span>
+                        </td>
+
+                        <td className="px-6 py-3.5 text-right whitespace-nowrap">
+                          {canPrintReceipt ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setActiveReceipt(bookingToReceipt(b))
+                              }
+                              className="px-3 py-1.5 text-xs font-extrabold text-gray-900 bg-white/25 hover:bg-white/45 backdrop-blur-[1px] border border-white/90 ring-1 ring-slate-900/15 rounded-full shadow-[4px_4px_10px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)] inline-flex items-center gap-1 transition-all cursor-pointer"
+                            >
+                              <Printer size={13} className="text-[#ff5722]" />
+                              <span>Receipt</span>
+                            </button>
+                          ) : (
+                            <span className="text-xs font-semibold text-gray-400">
+                              —
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
 
         <div className="px-4 pb-2">
           <Pagination

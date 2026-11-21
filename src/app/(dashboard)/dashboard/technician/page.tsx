@@ -91,11 +91,11 @@ export default function TechnicianDashboard() {
   ];
 
   return (
-    <div className="space-y-8 relative z-10">
+    <div className="space-y-8 relative z-10 min-w-0">
       {/* Transparent Soft UI Header Banner */}
-      <div className="relative overflow-hidden rounded-[2rem] bg-transparent hover:bg-white/5 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/12 p-6 sm:p-8 shadow-[14px_14px_28px_rgba(15,23,42,0.13),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)] transition-all duration-300">
+      <div className="relative overflow-hidden rounded-[2rem] bg-transparent hover:bg-white/5 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/12 p-5 sm:p-8 shadow-[14px_14px_28px_rgba(15,23,42,0.13),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)] transition-all duration-300">
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
+          <div className="min-w-0">
             <span className="inline-flex items-center gap-1.5 py-1 px-3.5 rounded-full bg-white/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-[#ff5722]/25 text-[#ff5722] font-extrabold tracking-wider uppercase text-[11px] mb-3 shadow-[5px_5px_12px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)]">
               <Sparkles size={12} /> Technician Workspace
             </span>
@@ -109,7 +109,7 @@ export default function TechnicianDashboard() {
 
           <Link
             href="/dashboard/technician/add-service"
-            className="inline-flex items-center justify-center gap-1.5 px-5 py-3 rounded-full bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white text-xs sm:text-sm font-extrabold border border-[#ff5722]/40 shadow-[6px_6px_16px_rgba(255,87,34,0.34),-4px_-4px_10px_rgba(255,255,255,0.85)] hover:from-[#e64a19] hover:to-[#ff5722] transition-all shrink-0 self-start sm:self-center"
+            className="inline-flex items-center justify-center gap-1.5 px-5 py-3 rounded-full bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white text-xs sm:text-sm font-extrabold border border-[#ff5722]/40 shadow-[6px_6px_16px_rgba(255,87,34,0.34),-4px_-4px_10px_rgba(255,255,255,0.85)] hover:from-[#e64a19] hover:to-[#ff5722] transition-all shrink-0 w-full sm:w-auto self-start sm:self-center"
           >
             <PlusCircle size={16} />
             <span>Add Service</span>
@@ -118,7 +118,7 @@ export default function TechnicianDashboard() {
       </div>
 
       {/* Transparent Soft UI Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
         {statCards.map((card) => {
           const IconComponent = card.icon;
 
@@ -126,19 +126,19 @@ export default function TechnicianDashboard() {
             <Link
               key={card.label}
               href={card.href}
-              className="group relative overflow-hidden bg-transparent hover:bg-white/8 backdrop-blur-[1px] p-6 rounded-[2rem] border border-white/85 ring-1 ring-slate-900/12 hover:ring-[#ff5722]/35 hover:border-[#ff5722]/50 shadow-[14px_14px_28px_rgba(15,23,42,0.13),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)] hover:shadow-[16px_16px_32px_rgba(255,87,34,0.16),-10px_-10px_24px_rgba(255,255,255,0.96)] transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between"
+              className="group relative overflow-hidden min-w-0 bg-transparent hover:bg-white/8 backdrop-blur-[1px] p-5 sm:p-6 rounded-[2rem] border border-white/85 ring-1 ring-slate-900/12 hover:ring-[#ff5722]/35 hover:border-[#ff5722]/50 shadow-[14px_14px_28px_rgba(15,23,42,0.13),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)] hover:shadow-[16px_16px_32px_rgba(255,87,34,0.16),-10px_-10px_24px_rgba(255,255,255,0.96)] transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between"
             >
               {/* Subdued Hover Shine */}
               <div className="absolute inset-0 z-10 bg-gradient-to-tr from-transparent via-white/15 to-transparent -translate-x-[150%] group-hover:translate-x-[150%] transition-transform duration-[1.1s] ease-in-out pointer-events-none" />
 
-              <div className="relative z-20 flex items-center justify-between gap-4 mb-5">
+              <div className="relative z-20 flex items-center justify-between gap-3 mb-5">
                 <div
-                  className={`w-14 h-14 rounded-2xl border backdrop-blur-[1px] flex items-center justify-center transition-all duration-300 shrink-0 ${card.iconBox}`}
+                  className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl border backdrop-blur-[1px] flex items-center justify-center transition-all duration-300 shrink-0 ${card.iconBox}`}
                 >
-                  <IconComponent size={26} />
+                  <IconComponent size={24} />
                 </div>
 
-                <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-slate-900/10 shadow-[4px_4px_10px_rgba(15,23,42,0.08),-4px_-4px_10px_rgba(255,255,255,0.92)] text-xs font-bold text-gray-800 group-hover:text-[#ff5722] group-hover:border-[#ff5722]/35 transition-colors">
+                <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-slate-900/10 shadow-[4px_4px_10px_rgba(15,23,42,0.08),-4px_-4px_10px_rgba(255,255,255,0.92)] text-xs font-bold text-gray-800 group-hover:text-[#ff5722] group-hover:border-[#ff5722]/35 transition-colors shrink-0">
                   <span>View</span>
                   <ArrowUpRight
                     size={14}
@@ -147,14 +147,14 @@ export default function TechnicianDashboard() {
                 </span>
               </div>
 
-              <div className="relative z-20">
-                <p className="text-3xl font-extrabold text-gray-900 tracking-tight">
+              <div className="relative z-20 min-w-0">
+                <p className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight break-words">
                   {card.value}
                 </p>
-                <p className="text-sm font-bold text-gray-800 mt-1">
+                <p className="text-sm font-bold text-gray-800 mt-1 break-words">
                   {card.label}
                 </p>
-                <p className="text-xs font-medium text-gray-700 mt-0.5">
+                <p className="text-xs font-medium text-gray-700 mt-0.5 break-words">
                   {card.sublabel}
                 </p>
               </div>

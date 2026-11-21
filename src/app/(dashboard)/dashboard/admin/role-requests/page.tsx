@@ -99,12 +99,12 @@ export default function AdminRoleRequestsPage() {
   }
 
   return (
-    <div className="space-y-8 relative z-10">
-      <div className="relative overflow-hidden rounded-[2rem] bg-white/65 hover:bg-white/75 backdrop-blur-xs border border-white/85 p-6 sm:p-8 shadow-[10px_10px_24px_rgba(15,23,42,0.06),-10px_-10px_24px_rgba(255,255,255,0.92)] transition-all duration-300">
+    <div className="space-y-8 relative z-10 min-w-0">
+      <div className="relative overflow-hidden rounded-[2rem] bg-white/65 hover:bg-white/75 backdrop-blur-xs border border-white/85 p-5 sm:p-8 shadow-[10px_10px_24px_rgba(15,23,42,0.06),-10px_-10px_24px_rgba(255,255,255,0.92)] transition-all duration-300">
         <div className="absolute -right-14 -top-14 w-52 h-52 rounded-full bg-[#ff5722]/12 blur-2xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
+          <div className="min-w-0">
             <span className="inline-flex items-center gap-1.5 py-1 px-3.5 rounded-full bg-white/85 border border-white/90 text-[#ff5722] font-extrabold tracking-wider uppercase text-[11px] mb-3 shadow-2xs">
               <Sparkles size={12} /> Admin Control
             </span>
@@ -119,7 +119,7 @@ export default function AdminRoleRequestsPage() {
           <button
             type="button"
             onClick={loadRequests}
-            className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full bg-white/85 hover:bg-white text-gray-800 hover:text-[#ff5722] text-xs sm:text-sm font-extrabold border border-white shadow-xs transition-all cursor-pointer shrink-0 self-start sm:self-center"
+            className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full bg-white/85 hover:bg-white text-gray-800 hover:text-[#ff5722] text-xs sm:text-sm font-extrabold border border-white shadow-xs transition-all cursor-pointer shrink-0 w-full sm:w-auto self-start sm:self-center"
           >
             <RefreshCw size={15} />
             <span>Refresh</span>
@@ -128,7 +128,7 @@ export default function AdminRoleRequestsPage() {
       </div>
 
       {requests.length === 0 ? (
-        <div className="rounded-[2rem] bg-white/65 backdrop-blur-xs border border-white/85 p-10 text-center shadow-[10px_10px_24px_rgba(15,23,42,0.06),-10px_-10px_24px_rgba(255,255,255,0.92)]">
+        <div className="rounded-[2rem] bg-white/65 backdrop-blur-xs border border-white/85 p-8 sm:p-10 text-center shadow-[10px_10px_24px_rgba(15,23,42,0.06),-10px_-10px_24px_rgba(255,255,255,0.92)]">
           <div className="w-14 h-14 rounded-2xl bg-[#ff5722]/10 text-[#ff5722] flex items-center justify-center mx-auto mb-3">
             <UserCheck size={26} />
           </div>
@@ -140,8 +140,8 @@ export default function AdminRoleRequestsPage() {
           </p>
         </div>
       ) : (
-        <div className="rounded-[2rem] bg-white/55 backdrop-blur-xs border border-white/85 p-4 sm:p-6 shadow-[10px_10px_24px_rgba(15,23,42,0.06),-10px_-10px_24px_rgba(255,255,255,0.92)]">
-          <div className="grid grid-cols-1 gap-4">
+        <div className="rounded-[2rem] bg-white/55 backdrop-blur-xs border border-white/85 p-3.5 sm:p-6 shadow-[10px_10px_24px_rgba(15,23,42,0.06),-10px_-10px_24px_rgba(255,255,255,0.92)]">
+          <div className="grid grid-cols-1 gap-3.5 sm:gap-4">
             {paginatedRequests.map((reqItem) => {
               const memberName = reqItem.userName || reqItem.name || "User";
               const memberEmail = reqItem.userEmail || reqItem.email || "";
@@ -157,47 +157,52 @@ export default function AdminRoleRequestsPage() {
               return (
                 <div
                   key={reqItem._id}
-                  className="rounded-[1.75rem] bg-white/75 hover:bg-white/90 backdrop-blur-xs border border-white/90 p-5 shadow-[6px_6px_16px_rgba(15,23,42,0.05),-6px_-6px_16px_rgba(255,255,255,0.92)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 transition-all"
+                  className="rounded-[1.5rem] sm:rounded-[1.75rem] bg-white/75 hover:bg-white/90 backdrop-blur-xs border border-white/90 p-4 sm:p-5 shadow-[6px_6px_16px_rgba(15,23,42,0.05),-6px_-6px_16px_rgba(255,255,255,0.92)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 transition-all min-w-0"
                 >
-                  <div className="space-y-1">
+                  <div className="space-y-1 min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-base font-extrabold text-gray-900">
+                      <h3 className="text-sm sm:text-base font-extrabold text-gray-900 break-words">
                         {memberName}
                       </h3>
                       <span
-                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider border ${statusBadge}`}
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider border shrink-0 ${statusBadge}`}
                       >
                         {reqItem.status}
                       </span>
                     </div>
-                    <p className="text-xs font-medium text-gray-600">
-                      {memberEmail}
-                    </p>
-                    <p className="text-xs font-bold text-gray-700 pt-1">
-                      Current:{" "}
+
+                    {memberEmail && (
+                      <p className="text-xs font-medium text-gray-600 break-all sm:break-words">
+                        {memberEmail}
+                      </p>
+                    )}
+
+                    <p className="text-xs font-bold text-gray-700 pt-1 flex flex-wrap items-center gap-1">
+                      <span>Current:</span>
                       <span className="uppercase text-gray-900">
                         {reqItem.currentRole || "customer"}
-                      </span>{" "}
-                      <span className="mx-1.5 text-[#ff5722]">→</span>
-                      Requested:{" "}
+                      </span>
+                      <span className="mx-1 text-[#ff5722]">→</span>
+                      <span>Requested:</span>
                       <span className="uppercase text-[#ff5722]">
                         {reqItem.requestedRole}
                       </span>
                     </p>
+
                     {reqItem.reason && (
-                      <p className="text-xs text-gray-600 pt-0.5">
+                      <p className="text-xs text-gray-600 pt-0.5 break-words">
                         Note: {reqItem.reason}
                       </p>
                     )}
                   </div>
 
                   {reqItem.status === "pending" && (
-                    <div className="flex items-center gap-2.5 shrink-0">
+                    <div className="flex flex-col xs:flex-row sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2.5 shrink-0 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/60">
                       <button
                         type="button"
                         disabled={isBusy}
                         onClick={() => handleDecision(reqItem._id, "approved")}
-                        className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] hover:from-[#e64a19] hover:to-[#ff5722] text-white text-xs font-extrabold shadow-xs transition-all disabled:opacity-60 cursor-pointer"
+                        className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] hover:from-[#e64a19] hover:to-[#ff5722] text-white text-xs font-extrabold shadow-xs transition-all disabled:opacity-60 cursor-pointer"
                       >
                         {isBusy ? (
                           <Loader2 size={14} className="animate-spin" />
@@ -211,7 +216,7 @@ export default function AdminRoleRequestsPage() {
                         type="button"
                         disabled={isBusy}
                         onClick={() => handleDecision(reqItem._id, "rejected")}
-                        className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-white hover:bg-red-50 text-red-600 text-xs font-extrabold border border-red-200/80 transition-all disabled:opacity-60 cursor-pointer"
+                        className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full bg-white hover:bg-red-50 text-red-600 text-xs font-extrabold border border-red-200/80 transition-all disabled:opacity-60 cursor-pointer"
                       >
                         <XCircle size={15} />
                         <span>Reject</span>

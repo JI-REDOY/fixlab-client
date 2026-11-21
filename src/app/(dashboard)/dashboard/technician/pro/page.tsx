@@ -319,9 +319,9 @@ function ProStripeCheckoutForm({
   return (
     <form onSubmit={handlePay} className="space-y-4">
       <div className="rounded-2xl bg-slate-50 border border-slate-200 p-3.5 space-y-1.5 text-xs">
-        <div className="flex justify-between">
+        <div className="flex justify-between gap-2">
           <span className="font-semibold text-gray-500">Selected Plan</span>
-          <span className="font-extrabold text-gray-900">{plan.name}</span>
+          <span className="font-extrabold text-gray-900 text-right">{plan.name}</span>
         </div>
         <div className="flex justify-between gap-2">
           <span className="font-semibold text-gray-500 shrink-0">
@@ -331,9 +331,9 @@ function ProStripeCheckoutForm({
             {plan.billingNote}
           </span>
         </div>
-        <div className="flex justify-between">
-          <span className="font-semibold text-gray-500">Service Cap</span>
-          <span className="font-bold text-emerald-700">
+        <div className="flex justify-between gap-2">
+          <span className="font-semibold text-gray-500 shrink-0">Service Cap</span>
+          <span className="font-bold text-emerald-700 text-right">
             Unlimited + Verified Pro Badge
           </span>
         </div>
@@ -346,9 +346,9 @@ function ProStripeCheckoutForm({
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
+        <div className="min-w-0">
           <label className="flex items-center gap-1 text-[11px] font-extrabold text-gray-800 mb-1">
-            <User size={12} className="text-[#ff5722]" />
+            <User size={12} className="text-[#ff5722] shrink-0" />
             <span>Billing Name</span>
           </label>
           <input
@@ -358,13 +358,13 @@ function ProStripeCheckoutForm({
             value={billingName}
             onChange={(e) => setBillingName(e.target.value)}
             placeholder="Full name"
-            className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-gray-900 outline-none focus:border-[#ff5722] focus:bg-white disabled:opacity-60"
+            className="w-full min-w-0 px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-gray-900 outline-none focus:border-[#ff5722] focus:bg-white disabled:opacity-60"
           />
         </div>
 
-        <div>
+        <div className="min-w-0">
           <label className="flex items-center gap-1 text-[11px] font-extrabold text-gray-800 mb-1">
-            <Mail size={12} className="text-[#ff5722]" />
+            <Mail size={12} className="text-[#ff5722] shrink-0" />
             <span>Billing Email</span>
           </label>
           <input
@@ -374,12 +374,12 @@ function ProStripeCheckoutForm({
             value={billingEmail}
             onChange={(e) => setBillingEmail(e.target.value)}
             placeholder="email@example.com"
-            className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-gray-900 outline-none focus:border-[#ff5722] focus:bg-white disabled:opacity-60"
+            className="w-full min-w-0 px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-gray-900 outline-none focus:border-[#ff5722] focus:bg-white disabled:opacity-60"
           />
         </div>
       </div>
 
-      <div className="rounded-2xl bg-slate-50 border border-slate-200 p-3.5 max-h-[240px] overflow-y-auto">
+      <div className="rounded-2xl bg-slate-50 border border-slate-200 p-3.5 max-h-[220px] sm:max-h-[240px] overflow-y-auto">
         <PaymentElement
           options={{
             layout: "tabs",
@@ -393,8 +393,8 @@ function ProStripeCheckoutForm({
         />
       </div>
 
-      <div className="flex items-center gap-2 text-[11px] font-semibold text-gray-600">
-        <ShieldCheck size={14} className="text-emerald-600 shrink-0" />
+      <div className="flex items-start gap-2 text-[11px] font-semibold text-gray-600">
+        <ShieldCheck size={14} className="text-emerald-600 shrink-0 mt-0.5" />
         <span>
           Secured by Stripe. Instant Verified Pro activation upon payment.
         </span>
@@ -672,11 +672,11 @@ function TechnicianProPlansContent() {
     : null;
 
   return (
-    <div className="max-w-6xl mx-auto py-3 px-3 sm:px-4 space-y-3">
+    <div className="max-w-6xl mx-auto py-3 px-3 sm:px-4 space-y-3 min-w-0">
       {isProActive && proExpiresAt && (
-        <div className="rounded-2xl bg-white border border-[#ff5722]/30 px-4 py-3 shadow-xs flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider">
+        <div className="rounded-2xl bg-white/85 backdrop-blur-[1px] border border-[#ff5722]/30 px-3.5 sm:px-4 py-3 shadow-xs flex flex-col md:flex-row md:items-center md:justify-between gap-3 min-w-0">
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 min-w-0">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider shrink-0">
               <Timer size={12} />
               <span>
                 {activePlanId === "pro_yearly"
@@ -687,15 +687,15 @@ function TechnicianProPlansContent() {
             <h2 className="text-sm sm:text-base font-extrabold text-gray-900">
               Subscription Ends In
             </h2>
-            <span className="text-xs font-medium text-gray-500">
-- Expires:{" "}
+            <span className="text-xs font-medium text-gray-500 break-words">
+              - Expires:{" "}
               <strong className="font-bold text-gray-800">
                 {formattedExpiry}
               </strong>
             </span>
           </div>
 
-          <div className="grid grid-cols-4 gap-1.5 sm:gap-2 shrink-0">
+          <div className="grid grid-cols-4 gap-1.5 sm:gap-2 w-full md:w-auto shrink-0">
             {[
               { label: "Days", value: padTwo(countdown.days) },
               { label: "Hrs", value: padTwo(countdown.hours) },
@@ -704,7 +704,7 @@ function TechnicianProPlansContent() {
             ].map((unit) => (
               <div
                 key={unit.label}
-                className="min-w-[54px] sm:min-w-[60px] rounded-xl bg-slate-50 border border-slate-200 px-2 py-1.5 text-center"
+                className="min-w-0 sm:min-w-[60px] rounded-xl bg-slate-50 border border-slate-200 px-1.5 sm:px-2 py-1.5 text-center"
               >
                 <p className="text-sm sm:text-base font-black text-[#ff5722] tabular-nums leading-tight">
                   {unit.value}
@@ -718,7 +718,7 @@ function TechnicianProPlansContent() {
         </div>
       )}
 
-      <div className="text-center max-w-2xl mx-auto">
+      <div className="text-center max-w-2xl mx-auto px-1">
         <div className="inline-flex items-center gap-1.5 rounded-full bg-[#ff5722]/10 text-[#ff5722] px-3 py-0.5 text-[11px] font-bold mb-1.5">
           <Crown className="w-3.5 h-3.5" />
           <span>Technician Pro Plans</span>
@@ -749,33 +749,33 @@ function TechnicianProPlansContent() {
           return (
             <div
               key={plan.id}
-              className={`rounded-2xl p-4 sm:p-5 flex flex-col justify-between border transition ${
+              className={`min-w-0 rounded-2xl p-4 sm:p-5 flex flex-col justify-between border transition ${
                 isCurrentActivePlan
-                  ? "border-emerald-500 bg-white shadow-md ring-1 ring-emerald-500/25"
+                  ? "border-emerald-500 bg-white/95 shadow-md ring-1 ring-emerald-500/25"
                   : plan.highlighted
-                  ? "border-[#ff5722] bg-white shadow-md ring-1 ring-[#ff5722]/25"
-                  : "border-slate-200 bg-white shadow-2xs"
+                  ? "border-[#ff5722] bg-white/95 shadow-md ring-1 ring-[#ff5722]/25"
+                  : "border-slate-200 bg-white/90 shadow-2xs"
               }`}
             >
-              <div>
+              <div className="min-w-0">
                 <div className="flex items-center justify-between gap-2 mb-1.5">
                   <h2 className="text-base font-bold text-slate-900">
                     {plan.name}
                   </h2>
                   {isCurrentActivePlan ? (
-                    <span className="rounded-full bg-emerald-100 text-emerald-700 px-2.5 py-0.5 text-[11px] font-extrabold">
+                    <span className="rounded-full bg-emerald-100 text-emerald-700 px-2.5 py-0.5 text-[11px] font-extrabold shrink-0">
                       Active Plan
                     </span>
                   ) : (
                     plan.badge && (
-                      <span className="rounded-full bg-[#ff5722]/12 text-[#ff5722] px-2.5 py-0.5 text-[11px] font-bold">
+                      <span className="rounded-full bg-[#ff5722]/12 text-[#ff5722] px-2.5 py-0.5 text-[11px] font-bold shrink-0">
                         {plan.badge}
                       </span>
                     )
                   )}
                 </div>
 
-                <div className="mb-1 flex items-baseline gap-1">
+                <div className="mb-1 flex items-baseline gap-1 flex-wrap">
                   <span className="text-2xl sm:text-3xl font-extrabold text-slate-900">
                     {plan.priceLabel}
                   </span>
@@ -797,7 +797,7 @@ function TechnicianProPlansContent() {
                         key={tIdx}
                         className="text-[11px] font-medium text-slate-600 leading-snug"
                       >
-- {t}
+                        - {t}
                       </li>
                     ))}
                   </ul>
@@ -829,17 +829,17 @@ function TechnicianProPlansContent() {
                 }`}
               >
                 {isLoading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin shrink-0" />
                 ) : isPaidPlan && isProActive ? (
-                  <Check className="w-4 h-4" />
+                  <Check className="w-4 h-4 shrink-0" />
                 ) : plan.id === "free" ? (
-                  <ShieldCheck className="w-4 h-4" />
+                  <ShieldCheck className="w-4 h-4 shrink-0" />
                 ) : plan.id === "pro_monthly" ? (
-                  <Sparkles className="w-4 h-4" />
+                  <Sparkles className="w-4 h-4 shrink-0" />
                 ) : (
-                  <Zap className="w-4 h-4" />
+                  <Zap className="w-4 h-4 shrink-0" />
                 )}
-                <span>
+                <span className="truncate">
                   {isLoading
                     ? "Preparing Checkout..."
                     : isCurrentActivePlan
@@ -864,11 +864,11 @@ function TechnicianProPlansContent() {
         createPortal(
           <div
             onClick={closeCheckoutModal}
-            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4"
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-3 sm:p-4"
           >
             <div
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-lg rounded-[2rem] bg-white border border-slate-200 ring-1 ring-slate-900/15 p-5 sm:p-6 shadow-[0_24px_60px_rgba(15,23,42,0.35)]"
+              className="w-full max-w-lg max-h-[92vh] overflow-y-auto rounded-[2rem] bg-white border border-slate-200 ring-1 ring-slate-900/15 p-5 sm:p-6 shadow-[0_24px_60px_rgba(15,23,42,0.35)]"
             >
               <div className="flex items-center justify-between mb-3">
                 <div>

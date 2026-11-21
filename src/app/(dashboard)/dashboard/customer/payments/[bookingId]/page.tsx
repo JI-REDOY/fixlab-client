@@ -111,7 +111,7 @@ export default function BookingPaymentPage() {
 
   if (!booking) {
     return (
-      <div className="max-w-lg mx-auto py-16 text-center space-y-4">
+      <div className="max-w-lg mx-auto py-16 px-4 text-center space-y-4">
         <p className="text-base font-extrabold text-gray-900">
           Booking not found.
         </p>
@@ -132,7 +132,7 @@ export default function BookingPaymentPage() {
   const isCompleted = booking.status === "completed";
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 relative z-10">
+    <div className="max-w-2xl mx-auto space-y-6 relative z-10 min-w-0">
       <Link
         href="/dashboard/customer/bookings"
         className="inline-flex items-center gap-1.5 text-xs font-extrabold text-gray-700 hover:text-[#ff5722] transition-colors"
@@ -141,8 +141,8 @@ export default function BookingPaymentPage() {
         <span>Back to My Bookings</span>
       </Link>
 
-      <div className="relative overflow-hidden rounded-[2rem] bg-white/15 backdrop-blur-md border border-white/85 ring-1 ring-slate-900/12 p-6 sm:p-8 shadow-[14px_14px_30px_rgba(15,23,42,0.14),-10px_-10px_24px_rgba(255,255,255,0.92)] space-y-6">
-        <div>
+      <div className="relative overflow-hidden rounded-[2rem] bg-white/15 backdrop-blur-md border border-white/85 ring-1 ring-slate-900/12 p-5 sm:p-8 shadow-[14px_14px_30px_rgba(15,23,42,0.14),-10px_-10px_24px_rgba(255,255,255,0.92)] space-y-6">
+        <div className="min-w-0">
           <span className="inline-flex items-center gap-1.5 py-1 px-3.5 rounded-full bg-white/25 border border-white/90 ring-1 ring-[#ff5722]/25 text-[#ff5722] font-extrabold tracking-wider uppercase text-[11px] mb-3">
             <Sparkles size={12} /> Checkout Summary
           </span>
@@ -155,52 +155,52 @@ export default function BookingPaymentPage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="rounded-2xl bg-white/25 border border-white/85 p-4">
+          <div className="rounded-2xl bg-white/25 border border-white/85 p-4 min-w-0">
             <p className="text-[11px] font-extrabold uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
-              <User size={13} className="text-[#ff5722]" /> Technician
+              <User size={13} className="text-[#ff5722] shrink-0" /> Technician
             </p>
-            <p className="text-sm font-extrabold text-gray-900 mt-1">
+            <p className="text-sm font-extrabold text-gray-900 mt-1 break-words">
               {technicianName}
             </p>
           </div>
 
-          <div className="rounded-2xl bg-white/25 border border-white/85 p-4">
+          <div className="rounded-2xl bg-white/25 border border-white/85 p-4 min-w-0">
             <p className="text-[11px] font-extrabold uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
-              <Hash size={13} className="text-[#ff5722]" /> Job / Booking ID
+              <Hash size={13} className="text-[#ff5722] shrink-0" /> Job / Booking ID
             </p>
-            <p className="text-sm font-mono font-extrabold text-gray-900 mt-1">
+            <p className="text-xs sm:text-sm font-mono font-extrabold text-gray-900 mt-1 break-all">
               {booking._id}
             </p>
           </div>
 
-          <div className="rounded-2xl bg-white/25 border border-white/85 p-4">
+          <div className="rounded-2xl bg-white/25 border border-white/85 p-4 min-w-0">
             <p className="text-[11px] font-extrabold uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
-              <Wrench size={13} className="text-[#ff5722]" /> Service
+              <Wrench size={13} className="text-[#ff5722] shrink-0" /> Service
             </p>
-            <p className="text-sm font-extrabold text-gray-900 mt-1">
+            <p className="text-sm font-extrabold text-gray-900 mt-1 break-words">
               {booking.serviceTitle || "Repair Service"}
             </p>
           </div>
 
-          <div className="rounded-2xl bg-white/25 border border-white/85 p-4">
+          <div className="rounded-2xl bg-white/25 border border-white/85 p-4 min-w-0">
             <p className="text-[11px] font-extrabold uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
-              <DollarSign size={13} className="text-[#ff5722]" /> Amount Due
+              <DollarSign size={13} className="text-[#ff5722] shrink-0" /> Amount Due
             </p>
-            <p className="text-lg font-black text-[#ff5722] mt-0.5">
+            <p className="text-lg font-black text-[#ff5722] mt-0.5 break-words">
               ${payableAmount}
             </p>
           </div>
         </div>
 
         {isPaid ? (
-          <div className="rounded-2xl bg-emerald-500/15 border border-emerald-500/30 p-4 flex items-center justify-between gap-3">
+          <div className="rounded-2xl bg-emerald-500/15 border border-emerald-500/30 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 text-emerald-800 text-xs sm:text-sm font-extrabold">
-              <CheckCircle2 size={18} />
+              <CheckCircle2 size={18} className="shrink-0" />
               <span>This job is already paid.</span>
             </div>
             <Link
               href="/dashboard/customer/payments"
-              className="px-4 py-2 rounded-full bg-emerald-600 text-white text-xs font-extrabold"
+              className="px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold text-center shrink-0 transition-colors"
             >
               View Receipts
             </Link>

@@ -326,10 +326,10 @@ export default function MyBookingsPage() {
   );
 
   return (
-    <div className="space-y-8 relative z-10">
-      <div className="relative overflow-hidden rounded-[2rem] bg-white border border-slate-200/80 p-6 sm:p-8 shadow-xs">
+    <div className="space-y-8 relative z-10 min-w-0">
+      <div className="relative overflow-hidden rounded-[2rem] bg-white border border-slate-200/80 p-5 sm:p-8 shadow-xs">
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
+          <div className="min-w-0">
             <span className="inline-flex items-center gap-1.5 py-1 px-3.5 rounded-full bg-[#ff5722]/10 border border-[#ff5722]/20 text-[#ff5722] font-extrabold tracking-wider uppercase text-[11px] mb-3">
               <Sparkles size={12} /> Repair Tracker
             </span>
@@ -352,240 +352,421 @@ export default function MyBookingsPage() {
         </div>
       </div>
 
-      <div className="relative overflow-hidden bg-white rounded-[2rem] border border-slate-200/80 p-2 sm:p-4 shadow-xs">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-200/80">
-                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
-                  <span className="inline-flex items-center gap-1.5">
-                    <Wrench size={13} className="text-[#ff5722]" />
-                    Service
-                  </span>
-                </th>
-                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
-                  <span className="inline-flex items-center gap-1.5">
-                    <UserCheck size={13} className="text-[#ff5722]" />
-                    Technician
-                  </span>
-                </th>
-                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
-                  <span className="inline-flex items-center gap-1.5">
-                    <Calendar size={13} className="text-[#ff5722]" />
-                    Date
-                  </span>
-                </th>
-                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
-                  Timeline
-                </th>
-                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider text-center">
-                  Receipt
-                </th>
-                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider text-right">
-                  Action
-                </th>
-              </tr>
-            </thead>
+      <div className="relative overflow-hidden bg-white rounded-[2rem] border border-slate-200/80 p-3 sm:p-4 shadow-xs">
+        {paginatedBookings.length === 0 ? (
+          <div className="px-4 py-14 text-center">
+            <div className="inline-flex flex-col items-center justify-center p-6 rounded-[1.75rem] bg-slate-50 border border-slate-200/80">
+              <div className="w-14 h-14 rounded-2xl bg-[#ff5722]/10 border border-[#ff5722]/20 flex items-center justify-center text-[#ff5722] mb-3">
+                <Wrench size={24} />
+              </div>
+              <p className="text-sm font-extrabold text-gray-900">
+                No bookings found.
+              </p>
+              <p className="text-xs font-medium text-gray-700 mt-1">
+                Book a repair service to track its progress here.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Mobile Card View */}
+            <div className="grid grid-cols-1 gap-3.5 md:hidden">
+              {paginatedBookings.map((booking) => {
+                const isClosed = ["rejected", "cancelled"].includes(
+                  booking.status
+                );
+                const currentStep = isClosed
+                  ? -1
+                  : booking.paymentStatus === "paid"
+                  ? 4
+                  : Math.max(0, steps.indexOf(booking.status));
+                const price = booking.finalAmount ?? booking.basePrice ?? 0;
+                const formattedDate = booking.preferredDate
+                  ? new Date(booking.preferredDate).toLocaleDateString()
+                  : "—";
+                const isTechPro = isBookingTechnicianProActive(booking);
 
-            <tbody className="divide-y divide-slate-100">
-              {paginatedBookings.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-16 text-center">
-                    <div className="inline-flex flex-col items-center justify-center p-6 rounded-[1.75rem] bg-slate-50 border border-slate-200/80">
-                      <div className="w-14 h-14 rounded-2xl bg-[#ff5722]/10 border border-[#ff5722]/20 flex items-center justify-center text-[#ff5722] mb-3">
-                        <Wrench size={24} />
+                const canPrintBookingReceipt = [
+                  "accepted",
+                  "in-progress",
+                  "completed",
+                ].includes(booking.status);
+
+                return (
+                  <div
+                    key={booking._id}
+                    className="rounded-[1.5rem] bg-slate-50/70 border border-slate-200/90 p-4 space-y-3.5"
+                  >
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="relative w-12 h-12 rounded-2xl overflow-hidden shrink-0 border border-slate-200 bg-white">
+                        <Image
+                          src={booking.serviceImage || "/icon-whiteTheme.png"}
+                          alt={booking.serviceTitle || "Service"}
+                          fill
+                          sizes="48px"
+                          className="object-cover"
+                        />
                       </div>
-                      <p className="text-sm font-extrabold text-gray-900">
-                        No bookings found.
-                      </p>
-                      <p className="text-xs font-medium text-gray-700 mt-1">
-                        Book a repair service to track its progress here.
+
+                      <div className="min-w-0 flex-1">
+                        <p className="font-extrabold text-sm text-gray-900 break-words">
+                          {booking.serviceTitle || "Repair Service"}
+                        </p>
+                        <div className="flex items-center flex-wrap gap-2 mt-1">
+                          <span className="px-2.5 py-0.5 rounded-full bg-[#ff5722]/10 text-xs font-extrabold text-[#ff5722]">
+                            ${price}
+                          </span>
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-gray-600">
+                            <Calendar size={12} className="text-[#ff5722]" />
+                            <span>{formattedDate}</span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-slate-200/70 text-xs">
+                      <span className="inline-flex items-center gap-1.5 font-bold text-gray-600 shrink-0">
+                        <UserCheck size={13} className="text-[#ff5722]" />
+                        Technician
+                      </span>
+                      <div className="inline-flex items-center gap-1.5 min-w-0">
+                        <span className="font-bold text-gray-900 truncate">
+                          {booking.technicianName || "Verified Tech"}
+                        </span>
+                        {isTechPro && (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white text-[9px] font-extrabold tracking-wider uppercase shrink-0">
+                            <Crown size={9} />
+                            <span>PRO</span>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Timeline */}
+                    <div className="rounded-2xl bg-white border border-slate-200/80 p-3">
+                      <div className="flex items-center justify-between gap-1">
+                        {steps.map((step, idx) => (
+                          <div
+                            key={step}
+                            className="flex items-center flex-1 last:flex-initial"
+                          >
+                            <div
+                              title={step.replace("-", " ")}
+                              className={`w-2.5 h-2.5 rounded-full shrink-0 transition-colors ${
+                                idx <= currentStep
+                                  ? "bg-[#ff5722]"
+                                  : isClosed && idx === 0
+                                  ? "bg-red-500"
+                                  : "bg-slate-300"
+                              }`}
+                            />
+                            {idx < steps.length - 1 && (
+                              <div
+                                className={`h-0.5 flex-1 mx-1 transition-colors ${
+                                  idx < currentStep
+                                    ? "bg-[#ff5722]"
+                                    : "bg-slate-300"
+                                }`}
+                              />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      <p
+                        className={`text-[11px] font-extrabold mt-2 capitalize ${
+                          isClosed ? "text-red-600" : "text-gray-800"
+                        }`}
+                      >
+                        {booking.paymentStatus === "paid"
+                          ? "Paid & Completed"
+                          : booking.status.replace("-", " ")}
                       </p>
                     </div>
-                  </td>
-                </tr>
-              ) : (
-                paginatedBookings.map((booking) => {
-                  const isClosed = ["rejected", "cancelled"].includes(
-                    booking.status
-                  );
-                  const currentStep = isClosed
-                    ? -1
-                    : booking.paymentStatus === "paid"
-                    ? 4
-                    : Math.max(0, steps.indexOf(booking.status));
-                  const price = booking.finalAmount ?? booking.basePrice ?? 0;
-                  const formattedDate = booking.preferredDate
-                    ? new Date(booking.preferredDate).toLocaleDateString()
-                    : "—";
-                  const isTechPro = isBookingTechnicianProActive(booking);
 
-                  const canPrintBookingReceipt = [
-                    "accepted",
-                    "in-progress",
-                    "completed",
-                  ].includes(booking.status);
+                    {/* Actions */}
+                    <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-slate-200/70">
+                      {canPrintBookingReceipt && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setActiveReceipt(bookingToReceipt(booking))
+                          }
+                          className="px-3.5 py-2 text-xs font-extrabold text-gray-900 bg-white hover:bg-slate-100 border border-slate-200 rounded-full transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <Printer size={13} className="text-[#ff5722]" />
+                          <span>Receipt</span>
+                        </button>
+                      )}
 
-                  return (
-                    <tr
-                      key={booking._id}
-                      className="group hover:bg-slate-50/70 transition-colors"
-                    >
-                      <td className="px-6 py-3.5">
-                        <div className="flex items-center gap-3.5">
-                          <div className="relative w-12 h-12 rounded-2xl overflow-hidden shrink-0 border border-slate-200 bg-slate-100">
-                            <Image
-                              src={booking.serviceImage || "/icon-whiteTheme.png"}
-                              alt={booking.serviceTitle || "Service"}
-                              fill
-                              sizes="48px"
-                              className="object-cover"
+                      {booking.status === "requested" && (
+                        <button
+                          type="button"
+                          onClick={() => setBookingToCancel(booking)}
+                          className="px-4 py-2 text-xs font-extrabold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-full transition-colors cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      )}
+
+                      {booking.status === "completed" &&
+                        booking.paymentStatus === "unpaid" && (
+                          <button
+                            type="button"
+                            onClick={() => handlePayNow(booking)}
+                            className="px-4 py-2 text-xs font-extrabold text-white bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] hover:from-[#e64a19] hover:to-[#ff5722] rounded-full transition-all inline-flex items-center gap-1.5 shadow-xs cursor-pointer"
+                          >
+                            <CreditCard size={14} />
+                            <span>Pay Now</span>
+                          </button>
+                        )}
+
+                      {booking.paymentStatus === "paid" && !booking.rating && (
+                        <button
+                          type="button"
+                          onClick={() => openReviewModal(booking)}
+                          className="px-4 py-2 text-xs font-extrabold text-[#ff5722] bg-[#ff5722]/10 hover:bg-[#ff5722]/15 border border-[#ff5722]/25 rounded-full transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <Star size={14} />
+                          <span>Rate Service</span>
+                        </button>
+                      )}
+
+                      {booking.paymentStatus === "paid" &&
+                        Boolean(booking.rating) && (
+                          <div className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-xs font-extrabold text-amber-700">
+                            <Star
+                              size={13}
+                              className="text-amber-500 fill-amber-500"
                             />
+                            <span>{booking.rating}.0 / 5</span>
                           </div>
-                          <div className="min-w-0">
-                            <p className="font-extrabold text-sm text-gray-900 group-hover:text-[#ff5722] transition-colors truncate max-w-[200px]">
-                              {booking.serviceTitle || "Repair Service"}
-                            </p>
-                            <span className="inline-block mt-1 px-2.5 py-0.5 rounded-full bg-[#ff5722]/10 text-xs font-extrabold text-[#ff5722]">
-                              ${price}
-                            </span>
+                        )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200/80">
+                    <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
+                      <span className="inline-flex items-center gap-1.5">
+                        <Wrench size={13} className="text-[#ff5722]" />
+                        Service
+                      </span>
+                    </th>
+                    <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
+                      <span className="inline-flex items-center gap-1.5">
+                        <UserCheck size={13} className="text-[#ff5722]" />
+                        Technician
+                      </span>
+                    </th>
+                    <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
+                      <span className="inline-flex items-center gap-1.5">
+                        <Calendar size={13} className="text-[#ff5722]" />
+                        Date
+                      </span>
+                    </th>
+                    <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
+                      Timeline
+                    </th>
+                    <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider text-center">
+                      Receipt
+                    </th>
+                    <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider text-right">
+                      Action
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-slate-100">
+                  {paginatedBookings.map((booking) => {
+                    const isClosed = ["rejected", "cancelled"].includes(
+                      booking.status
+                    );
+                    const currentStep = isClosed
+                      ? -1
+                      : booking.paymentStatus === "paid"
+                      ? 4
+                      : Math.max(0, steps.indexOf(booking.status));
+                    const price = booking.finalAmount ?? booking.basePrice ?? 0;
+                    const formattedDate = booking.preferredDate
+                      ? new Date(booking.preferredDate).toLocaleDateString()
+                      : "—";
+                    const isTechPro = isBookingTechnicianProActive(booking);
+
+                    const canPrintBookingReceipt = [
+                      "accepted",
+                      "in-progress",
+                      "completed",
+                    ].includes(booking.status);
+
+                    return (
+                      <tr
+                        key={booking._id}
+                        className="group hover:bg-slate-50/70 transition-colors"
+                      >
+                        <td className="px-6 py-3.5">
+                          <div className="flex items-center gap-3.5">
+                            <div className="relative w-12 h-12 rounded-2xl overflow-hidden shrink-0 border border-slate-200 bg-slate-100">
+                              <Image
+                                src={
+                                  booking.serviceImage || "/icon-whiteTheme.png"
+                                }
+                                alt={booking.serviceTitle || "Service"}
+                                fill
+                                sizes="48px"
+                                className="object-cover"
+                              />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-extrabold text-sm text-gray-900 group-hover:text-[#ff5722] transition-colors truncate max-w-[200px]">
+                                {booking.serviceTitle || "Repair Service"}
+                              </p>
+                              <span className="inline-block mt-1 px-2.5 py-0.5 rounded-full bg-[#ff5722]/10 text-xs font-extrabold text-[#ff5722]">
+                                ${price}
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      </td>
+                        </td>
 
-                      <td className="px-6 py-3.5 text-sm font-bold text-gray-800 whitespace-nowrap">
-                        <div className="inline-flex items-center gap-2 flex-wrap">
-                          <span className="px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200/80">
-                            {booking.technicianName || "Verified Tech"}
-                          </span>
-                          {isTechPro && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white text-[10px] font-extrabold tracking-wider uppercase shadow-2xs">
-                              <Crown size={10} />
-                              <span>PRO</span>
+                        <td className="px-6 py-3.5 text-sm font-bold text-gray-800 whitespace-nowrap">
+                          <div className="inline-flex items-center gap-2 flex-wrap">
+                            <span className="px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200/80">
+                              {booking.technicianName || "Verified Tech"}
                             </span>
-                          )}
-                        </div>
-                      </td>
+                            {isTechPro && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white text-[10px] font-extrabold tracking-wider uppercase shadow-2xs">
+                                <Crown size={10} />
+                                <span>PRO</span>
+                              </span>
+                            )}
+                          </div>
+                        </td>
 
-                      <td className="px-6 py-3.5 text-sm font-semibold text-gray-800 whitespace-nowrap">
-                        {formattedDate}
-                      </td>
+                        <td className="px-6 py-3.5 text-sm font-semibold text-gray-800 whitespace-nowrap">
+                          {formattedDate}
+                        </td>
 
-                      <td className="px-6 py-3.5">
-                        <div className="inline-flex flex-col px-3.5 py-2 rounded-2xl bg-slate-50 border border-slate-200/80">
-                          <div className="flex items-center gap-1">
-                            {steps.map((step, idx) => (
-                              <div key={step} className="flex items-center">
-                                <div
-                                  title={step.replace("-", " ")}
-                                  className={`w-3 h-3 rounded-full transition-colors ${
-                                    idx <= currentStep
-                                      ? "bg-[#ff5722]"
-                                      : isClosed && idx === 0
-                                      ? "bg-red-500"
-                                      : "bg-slate-300"
-                                  }`}
-                                />
-                                {idx < steps.length - 1 && (
+                        <td className="px-6 py-3.5">
+                          <div className="inline-flex flex-col px-3.5 py-2 rounded-2xl bg-slate-50 border border-slate-200/80">
+                            <div className="flex items-center gap-1">
+                              {steps.map((step, idx) => (
+                                <div key={step} className="flex items-center">
                                   <div
-                                    className={`w-5 sm:w-6 h-0.5 transition-colors ${
-                                      idx < currentStep
+                                    title={step.replace("-", " ")}
+                                    className={`w-3 h-3 rounded-full transition-colors ${
+                                      idx <= currentStep
                                         ? "bg-[#ff5722]"
+                                        : isClosed && idx === 0
+                                        ? "bg-red-500"
                                         : "bg-slate-300"
                                     }`}
                                   />
-                                )}
-                              </div>
-                            ))}
+                                  {idx < steps.length - 1 && (
+                                    <div
+                                      className={`w-5 sm:w-6 h-0.5 transition-colors ${
+                                        idx < currentStep
+                                          ? "bg-[#ff5722]"
+                                          : "bg-slate-300"
+                                      }`}
+                                    />
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                            <p
+                              className={`text-[11px] font-extrabold mt-1.5 capitalize ${
+                                isClosed ? "text-red-600" : "text-gray-800"
+                              }`}
+                            >
+                              {booking.paymentStatus === "paid"
+                                ? "Paid & Completed"
+                                : booking.status.replace("-", " ")}
+                            </p>
                           </div>
-                          <p
-                            className={`text-[11px] font-extrabold mt-1.5 capitalize ${
-                              isClosed ? "text-red-600" : "text-gray-800"
-                            }`}
-                          >
-                            {booking.paymentStatus === "paid"
-                              ? "Paid & Completed"
-                              : booking.status.replace("-", " ")}
-                          </p>
-                        </div>
-                      </td>
+                        </td>
 
-                      <td className="px-6 py-3.5 text-center whitespace-nowrap">
-                        <div className="w-24 mx-auto flex items-center justify-center">
-                          {canPrintBookingReceipt ? (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setActiveReceipt(bookingToReceipt(booking))
-                              }
-                              className="w-full px-3 py-2 text-xs font-extrabold text-gray-900 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-full transition-colors inline-flex items-center justify-center gap-1.5 cursor-pointer"
-                            >
-                              <Printer size={13} className="text-[#ff5722]" />
-                              <span>Receipt</span>
-                            </button>
-                          ) : (
-                            <span className="text-xs font-semibold text-gray-400">
-                              —
-                            </span>
-                          )}
-                        </div>
-                      </td>
-
-                      <td className="px-6 py-3.5 text-right whitespace-nowrap">
-                        <div className="inline-flex items-center justify-end gap-2">
-                          {booking.status === "requested" && (
-                            <button
-                              type="button"
-                              onClick={() => setBookingToCancel(booking)}
-                              className="px-4 py-2 text-xs font-extrabold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-full transition-colors cursor-pointer"
-                            >
-                              Cancel
-                            </button>
-                          )}
-
-                          {booking.status === "completed" &&
-                            booking.paymentStatus === "unpaid" && (
+                        <td className="px-6 py-3.5 text-center whitespace-nowrap">
+                          <div className="w-24 mx-auto flex items-center justify-center">
+                            {canPrintBookingReceipt ? (
                               <button
                                 type="button"
-                                onClick={() => handlePayNow(booking)}
-                                className="px-4 py-2 text-xs font-extrabold text-white bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] hover:from-[#e64a19] hover:to-[#ff5722] rounded-full transition-all inline-flex items-center gap-1.5 shadow-xs cursor-pointer"
+                                onClick={() =>
+                                  setActiveReceipt(bookingToReceipt(booking))
+                                }
+                                className="w-full px-3 py-2 text-xs font-extrabold text-gray-900 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-full transition-colors inline-flex items-center justify-center gap-1.5 cursor-pointer"
                               >
-                                <CreditCard size={14} />
-                                <span>Pay Now</span>
+                                <Printer size={13} className="text-[#ff5722]" />
+                                <span>Receipt</span>
+                              </button>
+                            ) : (
+                              <span className="text-xs font-semibold text-gray-400">
+                                —
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        <td className="px-6 py-3.5 text-right whitespace-nowrap">
+                          <div className="inline-flex items-center justify-end gap-2">
+                            {booking.status === "requested" && (
+                              <button
+                                type="button"
+                                onClick={() => setBookingToCancel(booking)}
+                                className="px-4 py-2 text-xs font-extrabold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-full transition-colors cursor-pointer"
+                              >
+                                Cancel
                               </button>
                             )}
 
-                          {booking.paymentStatus === "paid" &&
-                            !booking.rating && (
-                              <button
-                                type="button"
-                                onClick={() => openReviewModal(booking)}
-                                className="px-4 py-2 text-xs font-extrabold text-[#ff5722] bg-[#ff5722]/10 hover:bg-[#ff5722]/15 border border-[#ff5722]/25 rounded-full transition-colors inline-flex items-center gap-1.5 cursor-pointer"
-                              >
-                                <Star size={14} />
-                                <span>Rate Service</span>
-                              </button>
-                            )}
+                            {booking.status === "completed" &&
+                              booking.paymentStatus === "unpaid" && (
+                                <button
+                                  type="button"
+                                  onClick={() => handlePayNow(booking)}
+                                  className="px-4 py-2 text-xs font-extrabold text-white bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] hover:from-[#e64a19] hover:to-[#ff5722] rounded-full transition-all inline-flex items-center gap-1.5 shadow-xs cursor-pointer"
+                                >
+                                  <CreditCard size={14} />
+                                  <span>Pay Now</span>
+                                </button>
+                              )}
 
-                          {booking.paymentStatus === "paid" &&
-                            Boolean(booking.rating) && (
-                              <div className="inline-flex items-center justify-end gap-1 px-3.5 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-xs font-extrabold text-amber-700">
-                                <Star
-                                  size={13}
-                                  className="text-amber-500 fill-amber-500"
-                                />
-                                <span>{booking.rating}.0 / 5</span>
-                              </div>
-                            )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                            {booking.paymentStatus === "paid" &&
+                              !booking.rating && (
+                                <button
+                                  type="button"
+                                  onClick={() => openReviewModal(booking)}
+                                  className="px-4 py-2 text-xs font-extrabold text-[#ff5722] bg-[#ff5722]/10 hover:bg-[#ff5722]/15 border border-[#ff5722]/25 rounded-full transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                                >
+                                  <Star size={14} />
+                                  <span>Rate Service</span>
+                                </button>
+                              )}
+
+                            {booking.paymentStatus === "paid" &&
+                              Boolean(booking.rating) && (
+                                <div className="inline-flex items-center justify-end gap-1 px-3.5 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-xs font-extrabold text-amber-700">
+                                  <Star
+                                    size={13}
+                                    className="text-amber-500 fill-amber-500"
+                                  />
+                                  <span>{booking.rating}.0 / 5</span>
+                                </div>
+                              )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
 
         <div className="px-4 pb-2">
           <Pagination
