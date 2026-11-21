@@ -25,12 +25,12 @@ export interface ReceiptPayload {
   cardLast4?: string;
 }
 
-/* Paper = 50mm x 69mm. The sheet fills the paper edge to edge (no side gap)
+/* Paper = 50mm x 70mm. The sheet fills the paper edge to edge (no side gap)
    and is 0.5mm shorter so it can never spill onto a 2nd page. */
 const PAPER_W = "50mm";
-const PAPER_H = "69mm";
+const PAPER_H = "70mm";
 const SHEET_W = "50mm";
-const SHEET_H = "68.5mm";
+const SHEET_H = "69.5mm";
 
 /* Payment completed => payment receipt, otherwise a booking receipt. */
 export function isReceiptPaid(receipt: ReceiptPayload) {
@@ -260,7 +260,7 @@ export default function ThermalReceiptModal({
         }
 
         @media print {
-          /* paper: 50mm x 69mm, no page margin */
+          /* paper: 50mm x 70mm, no page margin */
           @page {
             size: ${PAPER_W} ${PAPER_H};
             margin: 0;
@@ -325,7 +325,7 @@ export default function ThermalReceiptModal({
                   {isPaid ? "Transaction Receipt" : "Booking Receipt"}
                 </h3>
                 <p className="text-[11px] font-semibold text-gray-500">
-                  Paperang P1 • 50mm × 69mm
+                  Paperang P1 • 50mm × 70mm
                 </p>
               </div>
               <button
@@ -371,7 +371,7 @@ export default function ThermalReceiptModal({
                 className="flex-1 py-2.5 rounded-full bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] hover:from-[#e64a19] hover:to-[#ff5722] text-white text-xs font-extrabold shadow-[6px_6px_15px_rgba(255,87,34,0.34)] inline-flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Printer size={14} />
-                <span>Print 50×69mm</span>
+                <span>Print 50×70mm</span>
               </button>
             </div>
           </div>
