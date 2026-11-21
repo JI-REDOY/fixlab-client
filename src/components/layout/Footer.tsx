@@ -1,7 +1,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import { MapPin, Phone, Mail, ArrowRight } from "lucide-react";
-import { FaFacebookF, FaTwitter, FaLinkedinIn, FaInstagram } from "react-icons/fa";
+import { FaFacebookF, FaLinkedinIn, FaInstagram } from "react-icons/fa";
+import { FaXTwitter } from "react-icons/fa6";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -25,7 +26,7 @@ export default function Footer() {
 
   const socials = [
     { icon: FaFacebookF, label: "Facebook", href: "#" },
-    { icon: FaTwitter, label: "Twitter", href: "#" },
+    { icon: FaXTwitter, label: "X", href: "#" },
     { icon: FaLinkedinIn, label: "LinkedIn", href: "#" },
     { icon: FaInstagram, label: "Instagram", href: "#" },
   ];
