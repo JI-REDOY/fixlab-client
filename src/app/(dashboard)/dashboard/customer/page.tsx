@@ -12,12 +12,68 @@ import {
   Loader2,
   Sparkles,
   ArrowUpRight,
+  Crown,
 } from "lucide-react";
 
 interface CustomerStats {
   total: number;
   active: number;
   completed: number;
+}
+
+function checkProStatus(payload: any): boolean {
+  if (!payload || typeof payload !== "object") return false;
+
+  const targets = [
+    payload,
+    payload?.user,
+    payload?.data,
+    payload?.data?.user,
+    payload?.profile,
+    payload?.subscription,
+  ].filter(Boolean);
+
+  for (const item of targets) {
+    const planVal = String(
+      item?.plan || item?.subscriptionPlan || item?.tier || ""
+    )
+      .trim()
+      .toLowerCase();
+
+    const statusVal = String(
+      item?.subscriptionStatus || item?.proStatus || item?.status || ""
+    )
+      .trim()
+      .toLowerCase();
+
+    const hasProFlag = Boolean(
+      item?.isVerifiedPro ||
+        item?.isPro ||
+        item?.pro ||
+        planVal === "pro" ||
+        planVal.includes("pro") ||
+        statusVal === "pro"
+    );
+
+    if (!hasProFlag) continue;
+
+    const expiresAt =
+      item?.proExpiresAt ||
+      item?.subscriptionExpiresAt ||
+      item?.expiresAt ||
+      null;
+
+    if (expiresAt) {
+      const expiryMs = new Date(expiresAt).getTime();
+      if (!Number.isNaN(expiryMs) && expiryMs <= Date.now()) {
+        continue;
+      }
+    }
+
+    return true;
+  }
+
+  return false;
 }
 
 export default function CustomerDashboard() {
@@ -29,6 +85,7 @@ export default function CustomerDashboard() {
     active: 0,
     completed: 0,
   });
+  const [isProMember, setIsProMember] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const userRole = ((session?.user as any)?.role || "customer") as string;
@@ -37,6 +94,7 @@ export default function CustomerDashboard() {
     if (isPending) return;
 
     if (!session?.user) {
+      setIsProMember(false);
       setLoading(false);
       return;
     }
@@ -48,9 +106,14 @@ export default function CustomerDashboard() {
 
     let active = true;
     setLoading(true);
+    setIsProMember(checkProStatus(session));
 
-    fetchApi("/api/bookings/customer/stats")
-      .then((data) => {
+    Promise.all([
+      fetchApi("/api/bookings/customer/stats"),
+      fetchApi("/api/user/profile").catch(() => null),
+      fetchApi("/api/me").catch(() => null),
+    ])
+      .then(([data, profileData, meData]) => {
         if (!active) return;
         const source = data?.stats ?? data?.data ?? data ?? {};
         setStats({
@@ -58,6 +121,12 @@ export default function CustomerDashboard() {
           active: Number(source.active ?? 0),
           completed: Number(source.completed ?? 0),
         });
+
+        const proActive =
+          checkProStatus(session) ||
+          checkProStatus(profileData) ||
+          checkProStatus(meData);
+        setIsProMember(proActive);
       })
       .catch((err) => {
         console.error(err);
@@ -117,9 +186,17 @@ export default function CustomerDashboard() {
 
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <span className="inline-flex items-center gap-1.5 py-1 px-3.5 rounded-full bg-white/75 border border-white/85 text-[#ff5722] font-extrabold tracking-wider uppercase text-[11px] mb-3 shadow-[4px_4px_10px_rgba(15,23,42,0.06),-4px_-4px_10px_rgba(255,255,255,0.95)]">
-              <Sparkles size={12} /> Customer Portal
-            </span>
+            <div className="flex items-center gap-2 flex-wrap mb-3">
+              <span className="inline-flex items-center gap-1.5 py-1 px-3.5 rounded-full bg-white/75 border border-white/85 text-[#ff5722] font-extrabold tracking-wider uppercase text-[11px] shadow-[4px_4px_10px_rgba(15,23,42,0.06),-4px_-4px_10px_rgba(255,255,255,0.95)]">
+                <Sparkles size={12} /> Customer Portal
+              </span>
+              {isProMember && (
+                <span className="inline-flex items-center gap-1 py-1 px-3 rounded-full bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white font-extrabold tracking-wider uppercase text-[10px] shadow-2xs">
+                  <Crown size={11} />
+                  <span>PRO</span>
+                </span>
+              )}
+            </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
               Dashboard <span className="text-[#ff5722]">Overview</span>
             </h1>

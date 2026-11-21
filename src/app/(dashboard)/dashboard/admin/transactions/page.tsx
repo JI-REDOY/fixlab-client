@@ -17,6 +17,7 @@ import {
   Calendar,
   TrendingUp,
   Printer,
+  Crown,
 } from "lucide-react";
 
 const PAGE_SIZE = 6;
@@ -38,10 +39,65 @@ interface PaymentTransaction {
   cardLast4?: string;
   paidAt?: string;
   createdAt?: string;
+  isVerifiedPro?: boolean;
+  technicianIsVerifiedPro?: boolean;
+  plan?: string;
+  technicianPlan?: string;
+  proExpiresAt?: string | null;
+  technicianProExpiresAt?: string | null;
+  technician?: {
+    isVerifiedPro?: boolean;
+    plan?: string;
+    proExpiresAt?: string | null;
+  };
+}
+
+function isProActiveFromFields(obj: any): boolean {
+  if (!obj || typeof obj !== "object") return false;
+
+  const rawPro = Boolean(
+    obj?.isVerifiedPro ||
+      obj?.technicianIsVerifiedPro ||
+      obj?.plan === "pro" ||
+      obj?.technicianPlan === "pro" ||
+      obj?.user?.isVerifiedPro ||
+      obj?.user?.plan === "pro" ||
+      obj?.technician?.isVerifiedPro ||
+      obj?.technician?.plan === "pro"
+  );
+
+  if (!rawPro) return false;
+
+  const expiresAt =
+    obj?.proExpiresAt ||
+    obj?.technicianProExpiresAt ||
+    obj?.user?.proExpiresAt ||
+    obj?.technician?.proExpiresAt ||
+    null;
+
+  if (expiresAt) {
+    const expiryMs = new Date(expiresAt).getTime();
+    if (!Number.isNaN(expiryMs) && expiryMs <= Date.now()) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function extractList(payload: any): any[] {
+  if (Array.isArray(payload)) return payload;
+  if (!payload || typeof payload !== "object") return [];
+  for (const key of ["payments", "transactions", "users", "data", "records", "results"]) {
+    if (Array.isArray(payload[key])) return payload[key];
+  }
+  return [];
 }
 
 export default function AdminTransactionsPage() {
   const [payments, setPayments] = useState<PaymentTransaction[]>([]);
+  const [proEmails, setProEmails] = useState<Set<string>>(new Set());
+  const [proNames, setProNames] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [activeReceipt, setActiveReceipt] = useState<ReceiptPayload | null>(
@@ -50,18 +106,29 @@ export default function AdminTransactionsPage() {
 
   const loadPayments = useCallback(() => {
     setLoading(true);
-    fetchApi("/api/admin/payments")
-      .then((data) => {
-        const list = Array.isArray(data)
-          ? data
-          : Array.isArray(data?.payments)
-          ? data.payments
-          : Array.isArray(data?.transactions)
-          ? data.transactions
-          : Array.isArray(data?.data)
-          ? data.data
-          : [];
+    Promise.all([
+      fetchApi("/api/admin/payments"),
+      fetchApi("/api/admin/users").catch(() => []),
+    ])
+      .then(([data, usersData]) => {
+        const list = extractList(data);
         setPayments(list);
+
+        const usersList = extractList(usersData);
+        const emailsSet = new Set<string>();
+        const namesSet = new Set<string>();
+
+        for (const u of usersList) {
+          if (isProActiveFromFields(u)) {
+            const emailKey = String(u?.email || "").trim().toLowerCase();
+            const nameKey = String(u?.name || "").trim().toLowerCase();
+            if (emailKey) emailsSet.add(emailKey);
+            if (nameKey) namesSet.add(nameKey);
+          }
+        }
+
+        setProEmails(emailsSet);
+        setProNames(namesSet);
       })
       .catch((err) => {
         console.error(err);
@@ -73,6 +140,21 @@ export default function AdminTransactionsPage() {
   useEffect(() => {
     loadPayments();
   }, [loadPayments]);
+
+  const isTransactionTechnicianPro = (t: PaymentTransaction): boolean => {
+    if (isProActiveFromFields(t)) return true;
+
+    const techEmail = String(t?.technicianEmail || "")
+      .trim()
+      .toLowerCase();
+    const techName = String(t?.technicianName || "")
+      .trim()
+      .toLowerCase();
+
+    if (techEmail && proEmails.has(techEmail)) return true;
+    if (techName && proNames.has(techName)) return true;
+    return false;
+  };
 
   const totalRevenue = payments.reduce(
     (sum, p) => sum + Number(p?.amount ?? 0),
@@ -209,6 +291,7 @@ export default function AdminTransactionsPage() {
                   const formattedDate = dateValue
                     ? new Date(dateValue).toLocaleDateString()
                     : "—";
+                  const isTechPro = isTransactionTechnicianPro(t);
 
                   return (
                     <tr
@@ -220,7 +303,15 @@ export default function AdminTransactionsPage() {
                       </td>
 
                       <td className="px-6 py-3.5 text-sm font-semibold text-gray-800 whitespace-nowrap">
-                        {t.technicianName || "Technician"}
+                        <div className="inline-flex items-center gap-2">
+                          <span>{t.technicianName || "Technician"}</span>
+                          {isTechPro && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white text-[10px] font-extrabold tracking-wider uppercase shadow-2xs">
+                              <Crown size={10} />
+                              <span>PRO</span>
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       <td className="px-6 py-3.5 text-sm font-semibold text-gray-800">

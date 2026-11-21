@@ -15,10 +15,41 @@ import {
   Loader2,
   Sparkles,
   CheckCircle2,
+  Crown,
 } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { fetchApi } from "@/lib/api";
 import RequestModal from "@/components/forms/RequestModal";
+
+function isTechnicianProActive(service: any): boolean {
+  if (!service) return false;
+
+  const rawPro = Boolean(
+    service?.isVerifiedPro ||
+      service?.technicianIsVerifiedPro ||
+      service?.plan === "pro" ||
+      service?.technicianPlan === "pro" ||
+      service?.technician?.isVerifiedPro ||
+      service?.technician?.plan === "pro"
+  );
+
+  if (!rawPro) return false;
+
+  const expiresAt =
+    service?.proExpiresAt ||
+    service?.technicianProExpiresAt ||
+    service?.technician?.proExpiresAt ||
+    null;
+
+  if (expiresAt) {
+    const expiryMs = new Date(expiresAt).getTime();
+    if (!Number.isNaN(expiryMs) && expiryMs <= Date.now()) {
+      return false;
+    }
+  }
+
+  return true;
+}
 
 export default function ServiceDetailsPage() {
   const params = useParams();
@@ -38,7 +69,10 @@ export default function ServiceDetailsPage() {
   const handleRequestClick = () => {
     if (!session) {
       router.push(`/sign-in?redirect=/services/${params.id}`);
-    } else if (session.user.role === "technician" || session.user.role === "admin") {
+    } else if (
+      session.user.role === "technician" ||
+      session.user.role === "admin"
+    ) {
       return;
     } else {
       setIsModalOpen(true);
@@ -63,9 +97,12 @@ export default function ServiceDetailsPage() {
 
   const isRestrictedRole =
     session?.user?.role === "technician" || session?.user?.role === "admin";
+  const isPro = isTechnicianProActive(service);
 
   const technicianProfileHref = service.technicianEmail
-    ? `/technicians/${encodeURIComponent(service.technicianEmail)}?name=${encodeURIComponent(
+    ? `/technicians/${encodeURIComponent(
+        service.technicianEmail
+      )}?name=${encodeURIComponent(
         service.technicianName || "Technician"
       )}&specialty=${encodeURIComponent(service.category || "Repair")}`
     : "/services";
@@ -123,13 +160,16 @@ export default function ServiceDetailsPage() {
               {/* Spec Pills */}
               <div className="flex flex-wrap gap-3 mb-8 text-xs sm:text-sm font-bold text-gray-800">
                 <div className="flex items-center gap-2 bg-white/10 backdrop-blur-xs px-5 py-3 rounded-full border border-white/50 shadow-2xs">
-                  <Wrench size={17} className="text-[#ff5722]" /> {service.serviceMode}
+                  <Wrench size={17} className="text-[#ff5722]" />{" "}
+                  {service.serviceMode}
                 </div>
                 <div className="flex items-center gap-2 bg-white/10 backdrop-blur-xs px-5 py-3 rounded-full border border-white/50 shadow-2xs">
-                  <Clock size={17} className="text-[#ff5722]" /> {service.estimatedDuration}
+                  <Clock size={17} className="text-[#ff5722]" />{" "}
+                  {service.estimatedDuration}
                 </div>
                 <div className="flex items-center gap-2 bg-white/10 backdrop-blur-xs px-5 py-3 rounded-full border border-white/50 shadow-2xs">
-                  <MapPin size={17} className="text-[#ff5722]" /> {service.serviceArea}
+                  <MapPin size={17} className="text-[#ff5722]" />{" "}
+                  {service.serviceArea}
                 </div>
               </div>
 
@@ -180,7 +220,8 @@ export default function ServiceDetailsPage() {
             </button>
 
             <p className="text-xs text-center text-gray-700 mt-5 flex items-center justify-center gap-1.5 font-bold">
-              <ShieldCheck size={16} className="text-[#ff5722] shrink-0" /> Pay only after the job is done.
+              <ShieldCheck size={16} className="text-[#ff5722] shrink-0" /> Pay
+              only after the job is done.
             </p>
           </div>
 
@@ -210,15 +251,24 @@ export default function ServiceDetailsPage() {
                   </div>
                 </div>
                 <div>
-                  <p className="font-extrabold text-gray-900 text-xl leading-snug">
-                    {service.technicianName}
-                  </p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-extrabold text-gray-900 text-xl leading-snug">
+                      {service.technicianName}
+                    </p>
+                    {isPro && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white text-[10px] font-extrabold tracking-wider uppercase shadow-2xs">
+                        <Crown size={11} />
+                        <span>PRO</span>
+                      </span>
+                    )}
+                  </div>
                   <p className="text-sm text-[#ff5722] font-bold">
                     Verified Professional
                   </p>
                   {service.serviceArea && (
                     <p className="text-xs text-gray-600 font-semibold mt-1 flex items-center gap-1">
-                      <MapPin size={13} className="text-[#ff5722]" /> {service.serviceArea}
+                      <MapPin size={13} className="text-[#ff5722]" />{" "}
+                      {service.serviceArea}
                     </p>
                   )}
                 </div>
@@ -227,9 +277,13 @@ export default function ServiceDetailsPage() {
               <div className="h-px bg-gradient-to-r from-transparent via-orange-300/40 to-transparent" />
 
               <p className="text-sm text-gray-700 font-medium leading-relaxed">
-                Expert technician specialized in {service.category} repairs with over 5
-                years of experience. Explore all services and work details offered by{" "}
-                <span className="font-bold text-gray-900">{service.technicianName}</span>.
+                Expert technician specialized in {service.category} repairs with
+                over 5 years of experience. Explore all services and work details
+                offered by{" "}
+                <span className="font-bold text-gray-900">
+                  {service.technicianName}
+                </span>
+                .
               </p>
 
               <div className="grid grid-cols-2 gap-3 pt-1">

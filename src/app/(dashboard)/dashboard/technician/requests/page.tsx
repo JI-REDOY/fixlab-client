@@ -223,6 +223,12 @@ export default function RequestsPage() {
                     Status
                   </span>
                 </th>
+                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider text-center">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Printer size={13} className="text-[#ff5722]" />
+                    Receipt
+                  </span>
+                </th>
                 <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider text-right">
                   Actions
                 </th>
@@ -232,7 +238,7 @@ export default function RequestsPage() {
             <tbody className="divide-y divide-white/65">
               {paginatedRequests.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-16 text-center">
+                  <td colSpan={6} className="px-6 py-16 text-center">
                     <div className="inline-flex flex-col items-center justify-center p-6 rounded-[1.75rem] bg-white/10 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/12 shadow-[10px_10px_22px_rgba(15,23,42,0.1),-8px_-8px_18px_rgba(255,255,255,0.92)]">
                       <div className="w-14 h-14 rounded-2xl bg-white/15 border border-white/90 ring-1 ring-[#ff5722]/25 flex items-center justify-center text-[#ff5722] mb-3 shadow-[5px_5px_12px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)]">
                         <Wrench size={24} />
@@ -269,6 +275,8 @@ export default function RequestsPage() {
                       : req.status === "completed"
                       ? "bg-emerald-500/12 text-emerald-700 ring-emerald-500/25"
                       : "bg-[#ff5722]/12 text-[#ff5722] ring-[#ff5722]/25";
+
+                  const isPaid = req.paymentStatus === "paid";
 
                   return (
                     <tr
@@ -320,21 +328,30 @@ export default function RequestsPage() {
                         </span>
                       </td>
 
+                      <td className="px-6 py-3.5 text-center whitespace-nowrap">
+                        {canPrintReceipt ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setActiveReceipt(bookingToReceipt(req))
+                            }
+                            className="h-8 px-3.5 text-xs font-extrabold text-gray-900 bg-white/45 hover:bg-white/75 backdrop-blur-[1px] border border-white/90 ring-1 ring-slate-900/15 rounded-full shadow-[4px_4px_10px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)] inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                          >
+                            <Printer
+                              size={13}
+                              className="text-[#ff5722] shrink-0"
+                            />
+                            <span>Receipt</span>
+                          </button>
+                        ) : (
+                          <span className="text-xs font-semibold text-gray-400">
+                            —
+                          </span>
+                        )}
+                      </td>
+
                       <td className="px-6 py-3.5 text-right whitespace-nowrap">
                         <div className="inline-flex items-center justify-end gap-2">
-                          {canPrintReceipt && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setActiveReceipt(bookingToReceipt(req))
-                              }
-                              className="px-3 py-1.5 text-xs font-extrabold text-gray-900 bg-white/25 hover:bg-white/45 backdrop-blur-[1px] border border-white/90 ring-1 ring-slate-900/15 rounded-full shadow-[4px_4px_10px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)] inline-flex items-center gap-1 transition-all cursor-pointer"
-                            >
-                              <Printer size={13} className="text-[#ff5722]" />
-                              <span>Receipt</span>
-                            </button>
-                          )}
-
                           {req.status === "requested" && (
                             <>
                               <button
@@ -344,9 +361,9 @@ export default function RequestsPage() {
                                   updateStatus(req._id, "accepted")
                                 }
                                 title="Accept request"
-                                className="p-2 text-emerald-700 bg-white/15 hover:bg-emerald-500/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-emerald-500/30 rounded-xl shadow-[4px_4px_10px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)] transition-all disabled:opacity-60 cursor-pointer"
+                                className="h-8 w-8 text-emerald-700 bg-white/35 hover:bg-emerald-500/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-emerald-500/30 rounded-full shadow-[4px_4px_10px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)] inline-flex items-center justify-center transition-all disabled:opacity-60 cursor-pointer"
                               >
-                                <Check size={16} />
+                                <Check size={15} />
                               </button>
                               <button
                                 type="button"
@@ -355,9 +372,9 @@ export default function RequestsPage() {
                                   updateStatus(req._id, "rejected")
                                 }
                                 title="Reject request"
-                                className="p-2 text-red-600 bg-white/15 hover:bg-red-500/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-red-500/30 rounded-xl shadow-[4px_4px_10px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)] transition-all disabled:opacity-60 cursor-pointer"
+                                className="h-8 w-8 text-red-600 bg-white/35 hover:bg-red-500/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-red-500/30 rounded-full shadow-[4px_4px_10px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)] inline-flex items-center justify-center transition-all disabled:opacity-60 cursor-pointer"
                               >
-                                <X size={16} />
+                                <X size={15} />
                               </button>
                             </>
                           )}
@@ -369,9 +386,9 @@ export default function RequestsPage() {
                               onClick={() =>
                                 updateStatus(req._id, "in-progress")
                               }
-                              className="px-3.5 py-2 text-xs font-extrabold text-amber-800 bg-white/20 hover:bg-amber-500/20 backdrop-blur-[1px] border border-white/90 ring-1 ring-amber-500/35 rounded-full shadow-[4px_4px_10px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)] inline-flex items-center gap-1.5 transition-all disabled:opacity-60 cursor-pointer"
+                              className="h-8 px-3.5 text-xs font-extrabold text-amber-800 bg-white/35 hover:bg-amber-500/20 backdrop-blur-[1px] border border-white/90 ring-1 ring-amber-500/35 rounded-full shadow-[4px_4px_10px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)] inline-flex items-center justify-center gap-1.5 transition-all disabled:opacity-60 cursor-pointer"
                             >
-                              <Play size={13} />
+                              <Play size={12} />
                               <span>Start Work</span>
                             </button>
                           )}
@@ -381,19 +398,19 @@ export default function RequestsPage() {
                               type="button"
                               disabled={isBusy}
                               onClick={() => openCompleteModal(req)}
-                              className="px-4 py-2 text-xs font-extrabold text-white bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] hover:from-[#e64a19] hover:to-[#ff5722] rounded-full shadow-[5px_5px_14px_rgba(255,87,34,0.32),-3px_-3px_10px_rgba(255,255,255,0.85)] inline-flex items-center gap-1.5 transition-all disabled:opacity-60 cursor-pointer"
+                              className="h-8 px-4 text-xs font-extrabold text-white bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] hover:from-[#e64a19] hover:to-[#ff5722] rounded-full shadow-[5px_5px_14px_rgba(255,87,34,0.32),-3px_-3px_10px_rgba(255,255,255,0.85)] inline-flex items-center justify-center gap-1.5 transition-all disabled:opacity-60 cursor-pointer"
                             >
-                              <CheckCircle size={14} />
+                              <CheckCircle size={13} />
                               <span>Complete</span>
                             </button>
                           )}
 
                           {req.status === "completed" && (
                             <span
-                              className={`px-3 py-1 rounded-full text-[11px] font-extrabold capitalize border ${
-                                req.paymentStatus === "paid"
-                                  ? "bg-emerald-500/15 text-emerald-800 border-emerald-500/30"
-                                  : "bg-amber-500/15 text-amber-800 border-amber-500/30"
+                              className={`h-8 min-w-[68px] px-3 rounded-full text-[11px] font-extrabold capitalize border inline-flex items-center justify-center ${
+                                isPaid
+                                  ? "bg-emerald-500/15 text-emerald-800 border-emerald-500/35"
+                                  : "bg-amber-500/15 text-amber-800 border-amber-500/35"
                               }`}
                             >
                               {req.paymentStatus || "unpaid"}

@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { createPortal } from "react-dom";
 import { toast } from "@/components/ui/CustomToast";
 import Pagination from "@/components/ui/Pagination";
 import CardPaymentModal from "@/components/payment/CardPaymentModal";
@@ -19,6 +20,7 @@ import {
   X,
   Lock,
   Printer,
+  Crown,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { fetchApi } from "@/lib/api";
@@ -42,10 +44,73 @@ interface BookingItem {
   basePrice?: number | string;
   finalAmount?: number | string;
   rating?: number;
+  isVerifiedPro?: boolean;
+  technicianIsVerifiedPro?: boolean;
+  plan?: string;
+  technicianPlan?: string;
+  proExpiresAt?: string | null;
+  technicianProExpiresAt?: string | null;
+  technician?: {
+    isVerifiedPro?: boolean;
+    plan?: string;
+    proExpiresAt?: string | null;
+  };
+}
+
+function isProActiveFromFields(obj: any): boolean {
+  if (!obj || typeof obj !== "object") return false;
+
+  const rawPro = Boolean(
+    obj?.isVerifiedPro ||
+      obj?.technicianIsVerifiedPro ||
+      obj?.plan === "pro" ||
+      obj?.technicianPlan === "pro" ||
+      obj?.user?.isVerifiedPro ||
+      obj?.user?.plan === "pro" ||
+      obj?.technician?.isVerifiedPro ||
+      obj?.technician?.plan === "pro"
+  );
+
+  if (!rawPro) return false;
+
+  const expiresAt =
+    obj?.proExpiresAt ||
+    obj?.technicianProExpiresAt ||
+    obj?.user?.proExpiresAt ||
+    obj?.technician?.proExpiresAt ||
+    null;
+
+  if (expiresAt) {
+    const expiryMs = new Date(expiresAt).getTime();
+    if (!Number.isNaN(expiryMs) && expiryMs <= Date.now()) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function extractList(payload: any): any[] {
+  if (Array.isArray(payload)) return payload;
+  if (!payload || typeof payload !== "object") return [];
+  for (const key of [
+    "bookings",
+    "technicians",
+    "services",
+    "users",
+    "data",
+    "records",
+    "results",
+  ]) {
+    if (Array.isArray(payload[key])) return payload[key];
+  }
+  return [];
 }
 
 export default function MyBookingsPage() {
   const [bookings, setBookings] = useState<BookingItem[]>([]);
+  const [proEmails, setProEmails] = useState<Set<string>>(new Set());
+  const [proNames, setProNames] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [submittingReview, setSubmittingReview] = useState(false);
@@ -84,16 +149,41 @@ export default function MyBookingsPage() {
 
   const fetchBookings = useCallback((showSpinner = false) => {
     if (showSpinner) setLoading(true);
-    fetchApi("/api/bookings/my")
-      .then((data) => {
-        const list = Array.isArray(data)
-          ? data
-          : Array.isArray(data?.bookings)
-          ? data.bookings
-          : Array.isArray(data?.data)
-          ? data.data
-          : [];
+
+    Promise.all([
+      fetchApi("/api/bookings/my"),
+      fetchApi("/api/technicians").catch(() => []),
+      fetchApi("/api/services").catch(() => []),
+    ])
+      .then(([bookingsData, techData, servicesData]) => {
+        const list = extractList(bookingsData);
         setBookings(list);
+
+        const emailsSet = new Set<string>();
+        const namesSet = new Set<string>();
+
+        const candidates = [
+          ...extractList(techData),
+          ...extractList(servicesData),
+        ];
+
+        for (const item of candidates) {
+          if (isProActiveFromFields(item)) {
+            const emailKey = String(
+              item?.email || item?.technicianEmail || ""
+            )
+              .trim()
+              .toLowerCase();
+            const nameKey = String(item?.name || item?.technicianName || "")
+              .trim()
+              .toLowerCase();
+            if (emailKey) emailsSet.add(emailKey);
+            if (nameKey) namesSet.add(nameKey);
+          }
+        }
+
+        setProEmails(emailsSet);
+        setProNames(namesSet);
       })
       .catch((err: any) => {
         toast.error(err?.message || "Failed to load bookings");
@@ -125,6 +215,21 @@ export default function MyBookingsPage() {
     submittingReview,
     cancellingId,
   ]);
+
+  const isBookingTechnicianProActive = (booking: BookingItem): boolean => {
+    if (isProActiveFromFields(booking)) return true;
+
+    const techEmail = String(booking?.technicianEmail || "")
+      .trim()
+      .toLowerCase();
+    const techName = String(booking?.technicianName || "")
+      .trim()
+      .toLowerCase();
+
+    if (techEmail && proEmails.has(techEmail)) return true;
+    if (techName && proNames.has(techName)) return true;
+    return false;
+  };
 
   const confirmCancelBooking = async () => {
     if (!bookingToCancel?._id) return;
@@ -222,10 +327,10 @@ export default function MyBookingsPage() {
 
   return (
     <div className="space-y-8 relative z-10">
-      <div className="relative overflow-hidden rounded-[2rem] bg-transparent hover:bg-white/5 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/12 p-6 sm:p-8 shadow-[14px_14px_28px_rgba(15,23,42,0.13),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)] transition-all duration-300">
+      <div className="relative overflow-hidden rounded-[2rem] bg-white border border-slate-200/80 p-6 sm:p-8 shadow-xs">
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <span className="inline-flex items-center gap-1.5 py-1 px-3.5 rounded-full bg-white/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-[#ff5722]/25 text-[#ff5722] font-extrabold tracking-wider uppercase text-[11px] mb-3 shadow-[5px_5px_12px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)]">
+            <span className="inline-flex items-center gap-1.5 py-1 px-3.5 rounded-full bg-[#ff5722]/10 border border-[#ff5722]/20 text-[#ff5722] font-extrabold tracking-wider uppercase text-[11px] mb-3">
               <Sparkles size={12} /> Repair Tracker
             </span>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
@@ -236,7 +341,7 @@ export default function MyBookingsPage() {
             </p>
           </div>
 
-          <div className="px-5 py-3 rounded-2xl bg-white/10 backdrop-blur-[1px] border border-white/90 ring-1 ring-slate-900/12 shadow-[7px_7px_16px_rgba(15,23,42,0.1),-5px_-5px_12px_rgba(255,255,255,0.92)] self-start sm:self-center">
+          <div className="px-5 py-3 rounded-2xl bg-slate-50 border border-slate-200/80 self-start sm:self-center">
             <p className="text-[10px] font-extrabold uppercase tracking-wider text-gray-600">
               Total Bookings
             </p>
@@ -247,11 +352,11 @@ export default function MyBookingsPage() {
         </div>
       </div>
 
-      <div className="relative overflow-hidden bg-transparent backdrop-blur-[1px] rounded-[2rem] border border-white/85 ring-1 ring-slate-900/12 p-2 sm:p-4 shadow-[14px_14px_30px_rgba(15,23,42,0.14),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)]">
+      <div className="relative overflow-hidden bg-white rounded-[2rem] border border-slate-200/80 p-2 sm:p-4 shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-white/10 border-b border-white/80">
+              <tr className="bg-slate-50 border-b border-slate-200/80">
                 <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
                   <span className="inline-flex items-center gap-1.5">
                     <Wrench size={13} className="text-[#ff5722]" />
@@ -273,18 +378,21 @@ export default function MyBookingsPage() {
                 <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider">
                   Timeline
                 </th>
+                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider text-center">
+                  Receipt
+                </th>
                 <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider text-right">
                   Action
                 </th>
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-white/65">
+            <tbody className="divide-y divide-slate-100">
               {paginatedBookings.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-16 text-center">
-                    <div className="inline-flex flex-col items-center justify-center p-6 rounded-[1.75rem] bg-white/10 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/12 shadow-[10px_10px_22px_rgba(15,23,42,0.1),-8px_-8px_18px_rgba(255,255,255,0.92)]">
-                      <div className="w-14 h-14 rounded-2xl bg-white/15 border border-white/90 ring-1 ring-[#ff5722]/25 flex items-center justify-center text-[#ff5722] mb-3 shadow-[5px_5px_12px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)]">
+                  <td colSpan={6} className="px-6 py-16 text-center">
+                    <div className="inline-flex flex-col items-center justify-center p-6 rounded-[1.75rem] bg-slate-50 border border-slate-200/80">
+                      <div className="w-14 h-14 rounded-2xl bg-[#ff5722]/10 border border-[#ff5722]/20 flex items-center justify-center text-[#ff5722] mb-3">
                         <Wrench size={24} />
                       </div>
                       <p className="text-sm font-extrabold text-gray-900">
@@ -310,6 +418,7 @@ export default function MyBookingsPage() {
                   const formattedDate = booking.preferredDate
                     ? new Date(booking.preferredDate).toLocaleDateString()
                     : "—";
+                  const isTechPro = isBookingTechnicianProActive(booking);
 
                   const canPrintBookingReceipt = [
                     "accepted",
@@ -320,11 +429,11 @@ export default function MyBookingsPage() {
                   return (
                     <tr
                       key={booking._id}
-                      className="group hover:bg-white/10 transition-all duration-200"
+                      className="group hover:bg-slate-50/70 transition-colors"
                     >
                       <td className="px-6 py-3.5">
                         <div className="flex items-center gap-3.5">
-                          <div className="relative w-12 h-12 rounded-2xl overflow-hidden shrink-0 border border-white/90 ring-1 ring-slate-900/12 bg-white/10 shadow-[5px_5px_12px_rgba(15,23,42,0.1),-4px_-4px_10px_rgba(255,255,255,0.92)]">
+                          <div className="relative w-12 h-12 rounded-2xl overflow-hidden shrink-0 border border-slate-200 bg-slate-100">
                             <Image
                               src={booking.serviceImage || "/icon-whiteTheme.png"}
                               alt={booking.serviceTitle || "Service"}
@@ -337,7 +446,7 @@ export default function MyBookingsPage() {
                             <p className="font-extrabold text-sm text-gray-900 group-hover:text-[#ff5722] transition-colors truncate max-w-[200px]">
                               {booking.serviceTitle || "Repair Service"}
                             </p>
-                            <span className="inline-block mt-1 px-2.5 py-0.5 rounded-full bg-white/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-[#ff5722]/25 text-xs font-extrabold text-[#ff5722] shadow-[3px_3px_8px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)]">
+                            <span className="inline-block mt-1 px-2.5 py-0.5 rounded-full bg-[#ff5722]/10 text-xs font-extrabold text-[#ff5722]">
                               ${price}
                             </span>
                           </div>
@@ -345,9 +454,17 @@ export default function MyBookingsPage() {
                       </td>
 
                       <td className="px-6 py-3.5 text-sm font-bold text-gray-800 whitespace-nowrap">
-                        <span className="px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/10 shadow-[4px_4px_10px_rgba(15,23,42,0.08),-4px_-4px_10px_rgba(255,255,255,0.92)]">
-                          {booking.technicianName || "Verified Tech"}
-                        </span>
+                        <div className="inline-flex items-center gap-2 flex-wrap">
+                          <span className="px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200/80">
+                            {booking.technicianName || "Verified Tech"}
+                          </span>
+                          {isTechPro && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white text-[10px] font-extrabold tracking-wider uppercase shadow-2xs">
+                              <Crown size={10} />
+                              <span>PRO</span>
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       <td className="px-6 py-3.5 text-sm font-semibold text-gray-800 whitespace-nowrap">
@@ -355,7 +472,7 @@ export default function MyBookingsPage() {
                       </td>
 
                       <td className="px-6 py-3.5">
-                        <div className="inline-flex flex-col px-3.5 py-2 rounded-2xl bg-white/10 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/10 shadow-[inset_1px_1px_3px_rgba(15,23,42,0.08),4px_4px_10px_rgba(15,23,42,0.08),-4px_-4px_10px_rgba(255,255,255,0.92)]">
+                        <div className="inline-flex flex-col px-3.5 py-2 rounded-2xl bg-slate-50 border border-slate-200/80">
                           <div className="flex items-center gap-1">
                             {steps.map((step, idx) => (
                               <div key={step} className="flex items-center">
@@ -363,10 +480,10 @@ export default function MyBookingsPage() {
                                   title={step.replace("-", " ")}
                                   className={`w-3 h-3 rounded-full transition-colors ${
                                     idx <= currentStep
-                                      ? "bg-[#ff5722] shadow-[0_0_8px_rgba(255,87,34,0.5)]"
+                                      ? "bg-[#ff5722]"
                                       : isClosed && idx === 0
                                       ? "bg-red-500"
-                                      : "bg-slate-300/80"
+                                      : "bg-slate-300"
                                   }`}
                                 />
                                 {idx < steps.length - 1 && (
@@ -374,7 +491,7 @@ export default function MyBookingsPage() {
                                     className={`w-5 sm:w-6 h-0.5 transition-colors ${
                                       idx < currentStep
                                         ? "bg-[#ff5722]"
-                                        : "bg-slate-300/80"
+                                        : "bg-slate-300"
                                     }`}
                                   />
                                 )}
@@ -393,28 +510,36 @@ export default function MyBookingsPage() {
                         </div>
                       </td>
 
+                      <td className="px-6 py-3.5 text-center whitespace-nowrap">
+                        <div className="w-24 mx-auto flex items-center justify-center">
+                          {canPrintBookingReceipt ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setActiveReceipt(bookingToReceipt(booking))
+                              }
+                              className="w-full px-3 py-2 text-xs font-extrabold text-gray-900 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-full transition-colors inline-flex items-center justify-center gap-1.5 cursor-pointer"
+                            >
+                              <Printer size={13} className="text-[#ff5722]" />
+                              <span>Receipt</span>
+                            </button>
+                          ) : (
+                            <span className="text-xs font-semibold text-gray-400">
+                              —
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
                       <td className="px-6 py-3.5 text-right whitespace-nowrap">
                         <div className="inline-flex items-center justify-end gap-2">
                           {booking.status === "requested" && (
                             <button
                               type="button"
                               onClick={() => setBookingToCancel(booking)}
-                              className="px-4 py-2 text-xs font-extrabold text-red-600 bg-white/15 hover:bg-red-500/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-red-500/30 rounded-full shadow-[5px_5px_12px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)] transition-all cursor-pointer"
+                              className="px-4 py-2 text-xs font-extrabold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-full transition-colors cursor-pointer"
                             >
                               Cancel
-                            </button>
-                          )}
-
-                          {canPrintBookingReceipt && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setActiveReceipt(bookingToReceipt(booking))
-                              }
-                              className="px-3.5 py-2 text-xs font-extrabold text-gray-900 bg-white/25 hover:bg-white/45 backdrop-blur-[1px] border border-white/90 ring-1 ring-slate-900/15 rounded-full shadow-[5px_5px_12px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)] transition-all inline-flex items-center gap-1.5 cursor-pointer"
-                            >
-                              <Printer size={13} className="text-[#ff5722]" />
-                              <span>Receipt</span>
                             </button>
                           )}
 
@@ -423,7 +548,7 @@ export default function MyBookingsPage() {
                               <button
                                 type="button"
                                 onClick={() => handlePayNow(booking)}
-                                className="px-4 py-2 text-xs font-extrabold text-white bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] hover:from-[#e64a19] hover:to-[#ff5722] rounded-full transition-all inline-flex items-center gap-1.5 shadow-[6px_6px_15px_rgba(255,87,34,0.34),-4px_-4px_10px_rgba(255,255,255,0.85)] cursor-pointer"
+                                className="px-4 py-2 text-xs font-extrabold text-white bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] hover:from-[#e64a19] hover:to-[#ff5722] rounded-full transition-all inline-flex items-center gap-1.5 shadow-xs cursor-pointer"
                               >
                                 <CreditCard size={14} />
                                 <span>Pay Now</span>
@@ -435,7 +560,7 @@ export default function MyBookingsPage() {
                               <button
                                 type="button"
                                 onClick={() => openReviewModal(booking)}
-                                className="px-4 py-2 text-xs font-extrabold text-[#ff5722] bg-white/15 hover:bg-[#ff5722]/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-[#ff5722]/35 rounded-full shadow-[5px_5px_12px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)] transition-all inline-flex items-center gap-1.5 cursor-pointer"
+                                className="px-4 py-2 text-xs font-extrabold text-[#ff5722] bg-[#ff5722]/10 hover:bg-[#ff5722]/15 border border-[#ff5722]/25 rounded-full transition-colors inline-flex items-center gap-1.5 cursor-pointer"
                               >
                                 <Star size={14} />
                                 <span>Rate Service</span>
@@ -444,7 +569,7 @@ export default function MyBookingsPage() {
 
                           {booking.paymentStatus === "paid" &&
                             Boolean(booking.rating) && (
-                              <div className="inline-flex items-center justify-end gap-1 px-3.5 py-1.5 rounded-full bg-white/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-amber-500/30 shadow-[5px_5px_12px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)] text-xs font-extrabold text-amber-700">
+                              <div className="inline-flex items-center justify-end gap-1 px-3.5 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-xs font-extrabold text-amber-700">
                                 <Star
                                   size={13}
                                   className="text-amber-500 fill-amber-500"
@@ -480,95 +605,102 @@ export default function MyBookingsPage() {
       />
 
       {/* Job & Technician Summary Modal before Card Modal */}
-      {paymentSummaryBooking && (
-        <div
-          onClick={() => {
-            if (!creatingIntent) setPaymentSummaryBooking(null);
-          }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 backdrop-blur-[2px] p-4"
-        >
+      {paymentSummaryBooking &&
+        typeof document !== "undefined" &&
+        createPortal(
           <div
-            onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-md rounded-[2rem] bg-white/85 backdrop-blur-xl border border-white ring-1 ring-slate-900/15 p-6 sm:p-7 shadow-[16px_16px_36px_rgba(15,23,42,0.22),-10px_-10px_24px_rgba(255,255,255,0.95)]"
+            onClick={() => {
+              if (!creatingIntent) setPaymentSummaryBooking(null);
+            }}
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4"
           >
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-lg font-extrabold text-gray-900">
-                  Job & <span className="text-[#ff5722]">Technician</span>
-                </h3>
-                <p className="text-xs font-medium text-gray-600">
-                  Confirm details before opening card form
-                </p>
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-md rounded-[2rem] bg-white border border-slate-200 ring-1 ring-slate-900/15 p-6 sm:p-7 shadow-[0_24px_60px_rgba(15,23,42,0.35)]"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-extrabold text-gray-900">
+                    Job & <span className="text-[#ff5722]">Technician</span>
+                  </h3>
+                  <p className="text-xs font-medium text-gray-600">
+                    Confirm details before opening card form
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={creatingIntent}
+                  onClick={() => setPaymentSummaryBooking(null)}
+                  aria-label="Close modal"
+                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-gray-700 hover:text-[#ff5722] flex items-center justify-center transition-all cursor-pointer disabled:opacity-60"
+                >
+                  <X size={16} />
+                </button>
               </div>
-              <button
-                type="button"
-                disabled={creatingIntent}
-                onClick={() => setPaymentSummaryBooking(null)}
-                aria-label="Close modal"
-                className="w-8 h-8 rounded-full bg-white/70 hover:bg-white text-gray-700 hover:text-[#ff5722] border border-white flex items-center justify-center transition-all cursor-pointer disabled:opacity-60"
-              >
-                <X size={16} />
-              </button>
-            </div>
 
-            <div className="rounded-2xl bg-white/80 border border-white ring-1 ring-slate-900/10 p-4 space-y-2.5 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-gray-500">Technician</span>
-                <span className="font-extrabold text-gray-900">
-                  {paymentSummaryBooking.technicianName || "Verified Tech"}
-                </span>
+              <div className="rounded-2xl bg-slate-50 border border-slate-200/80 p-4 space-y-2.5 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-gray-500">Technician</span>
+                  <span className="font-extrabold text-gray-900">
+                    {paymentSummaryBooking.technicianName || "Verified Tech"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-gray-500">
+                    Job / Booking ID
+                  </span>
+                  <span className="font-mono font-bold text-gray-900">
+                    {paymentSummaryBooking._id}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-gray-500">Service</span>
+                  <span className="font-extrabold text-gray-900 truncate max-w-[200px]">
+                    {paymentSummaryBooking.serviceTitle || "Repair Service"}
+                  </span>
+                </div>
+                <div className="pt-2.5 border-t border-slate-200 flex items-center justify-between">
+                  <span className="font-extrabold text-gray-800">
+                    Total Amount
+                  </span>
+                  <span className="text-lg font-black text-[#ff5722]">
+                    ${summaryAmount}
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-gray-500">Job / Booking ID</span>
-                <span className="font-mono font-bold text-gray-900">
-                  {paymentSummaryBooking._id}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-gray-500">Service</span>
-                <span className="font-extrabold text-gray-900 truncate max-w-[200px]">
-                  {paymentSummaryBooking.serviceTitle || "Repair Service"}
-                </span>
-              </div>
-              <div className="pt-2.5 border-t border-slate-200/80 flex items-center justify-between">
-                <span className="font-extrabold text-gray-800">Total Amount</span>
-                <span className="text-lg font-black text-[#ff5722]">
-                  ${summaryAmount}
-                </span>
-              </div>
-            </div>
 
-            <div className="flex gap-2.5 mt-6">
-              <button
-                type="button"
-                disabled={creatingIntent}
-                onClick={() => setPaymentSummaryBooking(null)}
-                className="flex-1 py-3 bg-white/70 hover:bg-white border border-white text-gray-800 text-xs sm:text-sm font-extrabold rounded-full transition-all cursor-pointer disabled:opacity-60"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={creatingIntent || summaryAmount <= 0}
-                onClick={handleProceedToCardModal}
-                className="flex-1 py-3 bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] hover:from-[#e64a19] hover:to-[#ff5722] text-white text-xs sm:text-sm font-extrabold rounded-full shadow-[6px_6px_16px_rgba(255,87,34,0.34)] inline-flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-60"
-              >
-                {creatingIntent ? (
-                  <>
-                    <Loader2 size={15} className="animate-spin" />
-                    <span>Loading...</span>
-                  </>
-                ) : (
-                  <>
-                    <Lock size={14} />
-                    <span>Payment</span>
-                  </>
-                )}
-              </button>
+              <div className="flex gap-2.5 mt-6">
+                <button
+                  type="button"
+                  disabled={creatingIntent}
+                  onClick={() => setPaymentSummaryBooking(null)}
+                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-gray-800 text-xs sm:text-sm font-extrabold rounded-full transition-all cursor-pointer disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={creatingIntent || summaryAmount <= 0}
+                  onClick={handleProceedToCardModal}
+                  className="flex-1 py-3 bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] hover:from-[#e64a19] hover:to-[#ff5722] text-white text-xs sm:text-sm font-extrabold rounded-full shadow-[6px_6px_15px_rgba(255,87,34,0.34)] inline-flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-60"
+                >
+                  {creatingIntent ? (
+                    <>
+                      <Loader2 size={15} className="animate-spin" />
+                      <span>Loading...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Lock size={14} />
+                      <span>Payment</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
 
       {/* In-App Stripe Card Modal */}
       <CardPaymentModal
@@ -598,8 +730,8 @@ export default function MyBookingsPage() {
 
       {/* Cancel Confirmation Modal */}
       {bookingToCancel && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[2px] p-4">
-          <div className="relative w-full max-w-sm rounded-[2rem] bg-white/85 backdrop-blur-xl border border-white ring-1 ring-slate-900/15 p-6 shadow-[16px_16px_34px_rgba(15,23,42,0.22),-10px_-10px_24px_rgba(255,255,255,0.92)]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
+          <div className="relative w-full max-w-sm rounded-[2rem] bg-white border border-slate-200 p-6 shadow-[0_20px_50px_rgba(15,23,42,0.28)]">
             <h3 className="text-lg font-extrabold text-gray-900">
               Cancel <span className="text-red-600">Booking?</span>
             </h3>
@@ -616,7 +748,7 @@ export default function MyBookingsPage() {
                 type="button"
                 disabled={Boolean(cancellingId)}
                 onClick={() => setBookingToCancel(null)}
-                className="flex-1 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-gray-800 text-xs font-extrabold rounded-full transition-all cursor-pointer"
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-gray-800 text-xs font-extrabold rounded-full transition-all cursor-pointer"
               >
                 Keep It
               </button>
@@ -638,17 +770,18 @@ export default function MyBookingsPage() {
 
       {/* Review Modal */}
       {reviewModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[2px] p-4">
-          <div className="relative w-full max-w-md rounded-[2rem] bg-white/25 backdrop-blur-[4px] border border-white/90 ring-1 ring-slate-900/15 p-6 sm:p-7 shadow-[16px_16px_34px_rgba(15,23,42,0.22),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.9)]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
+          <div className="relative w-full max-w-md rounded-[2rem] bg-white border border-slate-200 p-6 sm:p-7 shadow-[0_20px_50px_rgba(15,23,42,0.28)]">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-extrabold text-gray-900">
                 Rate your <span className="text-[#ff5722]">experience</span>
               </h3>
               <button
                 type="button"
+                disabled={submittingReview}
                 onClick={() => setReviewModalOpen(false)}
                 aria-label="Close modal"
-                className="p-2 rounded-full bg-white/20 border border-white/90 text-gray-700 hover:text-[#ff5722] shadow-[4px_4px_10px_rgba(15,23,42,0.09),-3px_-3px_8px_rgba(255,255,255,0.92)] transition-all cursor-pointer"
+                className="p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-gray-700 hover:text-[#ff5722] transition-all cursor-pointer disabled:opacity-60"
               >
                 <X size={16} />
               </button>
@@ -663,7 +796,7 @@ export default function MyBookingsPage() {
               </p>
             )}
 
-            <div className="flex justify-center gap-2 mb-6 p-3 rounded-2xl bg-white/15 border border-white/85 shadow-[inset_1px_1px_3px_rgba(15,23,42,0.08)]">
+            <div className="flex justify-center gap-2 mb-6 p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
                   key={star}
@@ -688,24 +821,32 @@ export default function MyBookingsPage() {
               placeholder="Write a short review..."
               value={review}
               onChange={(e) => setReview(e.target.value)}
-              className="w-full px-4 py-3 bg-white/20 border border-white/90 ring-1 ring-slate-900/12 rounded-2xl outline-none focus:ring-2 focus:ring-[#ff5722]/35 focus:border-[#ff5722]/45 resize-none mb-5 text-sm font-medium text-gray-900 placeholder-gray-600 shadow-[inset_1px_1px_3px_rgba(15,23,42,0.07)]"
+              className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl outline-none focus:border-[#ff5722] resize-none mb-5 text-sm font-medium text-gray-900 placeholder-gray-500"
             />
 
             <div className="flex gap-2.5">
               <button
                 type="button"
+                disabled={submittingReview}
                 onClick={() => setReviewModalOpen(false)}
-                className="flex-1 py-3 bg-white/20 hover:bg-white/35 border border-white/90 text-gray-900 text-xs sm:text-sm font-extrabold rounded-full shadow-[5px_5px_12px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)] transition-all cursor-pointer"
+                className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-gray-900 text-xs sm:text-sm font-extrabold rounded-full transition-all cursor-pointer disabled:opacity-60"
               >
                 Cancel
               </button>
               <button
                 type="button"
-                onClick={handleReviewSubmit}
                 disabled={submittingReview}
-                className="flex-1 py-3 bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] hover:from-[#e64a19] hover:to-[#ff5722] text-white text-xs sm:text-sm font-extrabold rounded-full shadow-[6px_6px_15px_rgba(255,87,34,0.34),-4px_-4px_10px_rgba(255,255,255,0.85)] transition-all disabled:opacity-60 cursor-pointer"
+                onClick={handleReviewSubmit}
+                className="flex-1 py-3 bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] hover:from-[#e64a19] hover:to-[#ff5722] text-white text-xs sm:text-sm font-extrabold rounded-full shadow-[0_8px_18px_rgba(255,87,34,0.28)] inline-flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-60"
               >
-                {submittingReview ? "Submitting..." : "Submit"}
+                {submittingReview ? (
+                  <>
+                    <Loader2 size={15} className="animate-spin" />
+                    <span>Submitting...</span>
+                  </>
+                ) : (
+                  <span>Submit Review</span>
+                )}
               </button>
             </div>
           </div>

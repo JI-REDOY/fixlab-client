@@ -14,32 +14,119 @@ import {
   Loader2,
   Briefcase,
   ArrowUpRight,
+  Crown,
 } from "lucide-react";
 import { fetchApi } from "@/lib/api";
+
+function isProEntryActive(entry: any): boolean {
+  if (!entry) return false;
+
+  const rawPro = Boolean(
+    entry?.isVerifiedPro ||
+      entry?.technicianIsVerifiedPro ||
+      entry?.plan === "pro" ||
+      entry?.technicianPlan === "pro" ||
+      entry?.user?.isVerifiedPro ||
+      entry?.user?.plan === "pro"
+  );
+
+  if (!rawPro) return false;
+
+  const expiresAt =
+    entry?.proExpiresAt ||
+    entry?.technicianProExpiresAt ||
+    entry?.user?.proExpiresAt ||
+    null;
+
+  if (expiresAt) {
+    const expiryMs = new Date(expiresAt).getTime();
+    if (!Number.isNaN(expiryMs) && expiryMs <= Date.now()) {
+      return false;
+    }
+  }
+
+  return true;
+}
 
 export default function TechnicianDetailsPage() {
   const params = useParams();
   const searchParams = useSearchParams();
 
-  const decodedEmail = decodeURIComponent(String(params.email || "")).toLowerCase();
+  const rawParam = decodeURIComponent(String(params.email || "")).trim();
+  const decodedEmail = rawParam.toLowerCase();
   const queryName = searchParams.get("name");
   const querySpecialty = searchParams.get("specialty");
 
   const [services, setServices] = useState<any[]>([]);
+  const [matchedTech, setMatchedTech] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchApi("/api/services")
-      .then((data) => {
-        const list = Array.isArray(data) ? data : [];
-        const techServices = list.filter(
-          (item: any) =>
-            (item.technicianEmail || "").toLowerCase() === decodedEmail
-        );
+    let active = true;
+
+    const extractList = (payload: any) => {
+      if (Array.isArray(payload)) return payload;
+      if (Array.isArray(payload?.services)) return payload.services;
+      if (Array.isArray(payload?.technicians)) return payload.technicians;
+      if (Array.isArray(payload?.data)) return payload.data;
+      return [];
+    };
+
+    Promise.all([
+      fetchApi("/api/services").catch(() => []),
+      fetchApi("/api/public/technicians").catch(() => []),
+    ])
+      .then(([srvRes, techRes]) => {
+        if (!active) return;
+
+        const srvList = extractList(srvRes);
+        const techServices = srvList.filter((item: any) => {
+          const srvEmail = String(
+            item.technicianEmail || item.email || item.userEmail || ""
+          )
+            .trim()
+            .toLowerCase();
+          const srvName = String(item.technicianName || item.name || "")
+            .trim()
+            .toLowerCase();
+          const srvId = String(item._id || item.id || "")
+            .trim()
+            .toLowerCase();
+
+          return (
+            (decodedEmail && srvEmail === decodedEmail) ||
+            (decodedEmail && srvName === decodedEmail) ||
+            (decodedEmail && srvId === decodedEmail)
+          );
+        });
         setServices(techServices);
+
+        const techList = extractList(techRes);
+        const foundTech = techList.find((t: any) => {
+          const tEmail = String(
+            t.email || t.technicianEmail || t.userEmail || ""
+          )
+            .trim()
+            .toLowerCase();
+          const tName = String(t.name || "").trim().toLowerCase();
+          const tId = String(t._id || t.id || "").trim().toLowerCase();
+
+          return (
+            (decodedEmail && tEmail === decodedEmail) ||
+            (decodedEmail && tName === decodedEmail) ||
+            (decodedEmail && tId === decodedEmail)
+          );
+        });
+        setMatchedTech(foundTech || null);
       })
       .catch((err) => console.error(err))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, [decodedEmail]);
 
   if (loading) {
@@ -53,17 +140,25 @@ export default function TechnicianDetailsPage() {
   const firstService = services[0];
   const technicianName =
     firstService?.technicianName ||
+    matchedTech?.name ||
     queryName ||
-    decodedEmail.split("@")[0] ||
+    (decodedEmail.includes("@") ? decodedEmail.split("@")[0] : decodedEmail) ||
     "Technician";
-  const primaryArea = firstService?.serviceArea || "Dhaka, Bangladesh";
+  const primaryArea =
+    firstService?.serviceArea || matchedTech?.location || "Dhaka, Bangladesh";
   const categories = Array.from(
     new Set(services.map((s: any) => s.category).filter(Boolean))
   );
   const specialtyLabel =
     categories.length > 0
       ? categories.join(" • ")
-      : querySpecialty || "Appliance & Device Repair";
+      : querySpecialty ||
+        matchedTech?.specialty ||
+        "Appliance & Device Repair";
+
+  const isPro =
+    isProEntryActive(matchedTech) ||
+    services.some((item: any) => isProEntryActive(item));
 
   return (
     <div className="w-full bg-transparent min-h-screen pb-24 relative overflow-hidden">
@@ -98,9 +193,19 @@ export default function TechnicianDetailsPage() {
               </div>
 
               <div className="space-y-2">
-                <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#ff5722]/12 border border-[#ff5722]/20 text-[#ff5722] text-xs font-extrabold">
-                  <ShieldCheck size={14} /> Verified Technician
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#ff5722]/12 border border-[#ff5722]/20 text-[#ff5722] text-xs font-extrabold">
+                    <ShieldCheck size={14} /> Verified Technician
+                  </div>
+
+                  {isPro && (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white text-xs font-extrabold tracking-wider uppercase shadow-xs">
+                      <Crown size={13} />
+                      <span>PRO</span>
+                    </span>
+                  )}
                 </div>
+
                 <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">
                   {technicianName}
                 </h1>
@@ -112,7 +217,8 @@ export default function TechnicianDetailsPage() {
                     <MapPin size={15} className="text-[#ff5722]" /> {primaryArea}
                   </span>
                   <span className="inline-flex items-center gap-1.5 bg-white/10 px-4 py-2 rounded-full border border-white/45">
-                    <Star size={15} className="text-[#ff5722]" fill="currentColor" /> 4.8 Rating
+                    <Star size={15} className="text-[#ff5722]" fill="currentColor" />{" "}
+                    4.8 Rating
                   </span>
                 </div>
               </div>
@@ -163,69 +269,85 @@ export default function TechnicianDetailsPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
-              {services.map((item: any) => (
-                <div
-                  key={item._id}
-                  className="bg-white/10 backdrop-blur-xs rounded-[2.5rem] p-5 border border-white/50 shadow-[0_14px_32px_rgba(0,0,0,0.04),inset_0_1px_0_rgba(255,255,255,0.65)] flex flex-col justify-between transition-all duration-300 hover:-translate-y-1"
-                >
-                  <div>
-                    <div className="relative w-full h-48 rounded-[1.8rem] overflow-hidden mb-5 border border-white/40">
-                      <Image
-                        src={item.image}
-                        alt={item.title}
-                        fill
-                        sizes="(max-width: 768px) 100vw, 33vw"
-                        className="object-cover"
-                      />
-                      <span className="absolute top-3 left-3 bg-white/90 px-3.5 py-1 rounded-full text-xs font-extrabold text-[#ff5722]">
-                        {item.category}
-                      </span>
-                    </div>
+              {services.map((item: any) => {
+                const itemIsPro = isPro || isProEntryActive(item);
 
-                    <h3 className="text-lg font-extrabold text-gray-900 mb-2 line-clamp-1">
-                      {item.title}
-                    </h3>
-                    <p className="text-sm text-gray-700 line-clamp-2 mb-4">
-                      {item.description}
-                    </p>
-
-                    <div className="flex flex-wrap gap-2 text-xs font-bold text-gray-700 mb-5">
-                      <span className="inline-flex items-center gap-1 bg-white/10 px-3 py-1.5 rounded-full border border-white/40">
-                        <Wrench size={13} className="text-[#ff5722]" /> {item.serviceMode}
-                      </span>
-                      {item.estimatedDuration && (
-                        <span className="inline-flex items-center gap-1 bg-white/10 px-3 py-1.5 rounded-full border border-white/40">
-                          <Clock size={13} className="text-[#ff5722]" /> {item.estimatedDuration}
-                        </span>
-                      )}
-                      {item.serviceArea && (
-                        <span className="inline-flex items-center gap-1 bg-white/10 px-3 py-1.5 rounded-full border border-white/40">
-                          <MapPin size={13} className="text-[#ff5722]" /> {item.serviceArea}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="pt-4 border-t border-white/35 flex items-center justify-between gap-3">
+                return (
+                  <div
+                    key={item._id}
+                    className="bg-white/10 backdrop-blur-xs rounded-[2.5rem] p-5 border border-white/50 shadow-[0_14px_32px_rgba(0,0,0,0.04),inset_0_1px_0_rgba(255,255,255,0.65)] flex flex-col justify-between transition-all duration-300 hover:-translate-y-1"
+                  >
                     <div>
-                      <p className="text-[11px] font-bold text-gray-500 uppercase">
-                        Starting from
+                      <div className="relative w-full h-48 rounded-[1.8rem] overflow-hidden mb-5 border border-white/40">
+                        <Image
+                          src={item.image}
+                          alt={item.title}
+                          fill
+                          sizes="(max-width: 768px) 100vw, 33vw"
+                          className="object-cover"
+                        />
+                        <span className="absolute top-3 left-3 bg-white/90 px-3.5 py-1 rounded-full text-xs font-extrabold text-[#ff5722]">
+                          {item.category}
+                        </span>
+                      </div>
+
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <h3 className="text-lg font-extrabold text-gray-900 line-clamp-1">
+                          {item.title}
+                        </h3>
+                        {itemIsPro && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white text-[10px] font-extrabold tracking-wider uppercase shrink-0 shadow-2xs">
+                            <Crown size={11} />
+                            <span>PRO</span>
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="text-sm text-gray-700 line-clamp-2 mb-4">
+                        {item.description}
                       </p>
-                      <p className="text-2xl font-extrabold text-[#ff5722]">
-                        ${item.basePrice}
-                      </p>
+
+                      <div className="flex flex-wrap gap-2 text-xs font-bold text-gray-700 mb-5">
+                        <span className="inline-flex items-center gap-1 bg-white/10 px-3 py-1.5 rounded-full border border-white/40">
+                          <Wrench size={13} className="text-[#ff5722]" />{" "}
+                          {item.serviceMode}
+                        </span>
+                        {item.estimatedDuration && (
+                          <span className="inline-flex items-center gap-1 bg-white/10 px-3 py-1.5 rounded-full border border-white/40">
+                            <Clock size={13} className="text-[#ff5722]" />{" "}
+                            {item.estimatedDuration}
+                          </span>
+                        )}
+                        {item.serviceArea && (
+                          <span className="inline-flex items-center gap-1 bg-white/10 px-3 py-1.5 rounded-full border border-white/40">
+                            <MapPin size={13} className="text-[#ff5722]" />{" "}
+                            {item.serviceArea}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
-                    <Link
-                      href={`/services/${item._id}`}
-                      className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-[#ff5722] hover:bg-[#e64a19] text-white text-xs font-extrabold transition-colors shadow-sm"
-                    >
-                      <span>Details</span>
-                      <ArrowUpRight size={15} />
-                    </Link>
+                    <div className="pt-4 border-t border-white/35 flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[11px] font-bold text-gray-500 uppercase">
+                          Starting from
+                        </p>
+                        <p className="text-2xl font-extrabold text-[#ff5722]">
+                          ${item.basePrice}
+                        </p>
+                      </div>
+
+                      <Link
+                        href={`/services/${item._id}`}
+                        className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-[#ff5722] hover:bg-[#e64a19] text-white text-xs font-extrabold transition-colors shadow-sm"
+                      >
+                        <span>Details</span>
+                        <ArrowUpRight size={15} />
+                      </Link>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

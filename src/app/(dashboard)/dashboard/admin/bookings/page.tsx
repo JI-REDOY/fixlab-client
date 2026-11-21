@@ -17,6 +17,7 @@ import {
   Activity,
   DollarSign,
   Printer,
+  Crown,
 } from "lucide-react";
 
 const PAGE_SIZE = 6;
@@ -45,10 +46,65 @@ interface AdminBookingItem {
   paymentStatus?: string;
   basePrice?: number | string;
   finalAmount?: number | string;
+  isVerifiedPro?: boolean;
+  technicianIsVerifiedPro?: boolean;
+  plan?: string;
+  technicianPlan?: string;
+  proExpiresAt?: string | null;
+  technicianProExpiresAt?: string | null;
+  technician?: {
+    isVerifiedPro?: boolean;
+    plan?: string;
+    proExpiresAt?: string | null;
+  };
+}
+
+function isProActiveFromFields(obj: any): boolean {
+  if (!obj || typeof obj !== "object") return false;
+
+  const rawPro = Boolean(
+    obj?.isVerifiedPro ||
+      obj?.technicianIsVerifiedPro ||
+      obj?.plan === "pro" ||
+      obj?.technicianPlan === "pro" ||
+      obj?.user?.isVerifiedPro ||
+      obj?.user?.plan === "pro" ||
+      obj?.technician?.isVerifiedPro ||
+      obj?.technician?.plan === "pro"
+  );
+
+  if (!rawPro) return false;
+
+  const expiresAt =
+    obj?.proExpiresAt ||
+    obj?.technicianProExpiresAt ||
+    obj?.user?.proExpiresAt ||
+    obj?.technician?.proExpiresAt ||
+    null;
+
+  if (expiresAt) {
+    const expiryMs = new Date(expiresAt).getTime();
+    if (!Number.isNaN(expiryMs) && expiryMs <= Date.now()) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function extractList(payload: any): any[] {
+  if (Array.isArray(payload)) return payload;
+  if (!payload || typeof payload !== "object") return [];
+  for (const key of ["bookings", "users", "data", "records", "results"]) {
+    if (Array.isArray(payload[key])) return payload[key];
+  }
+  return [];
 }
 
 export default function AdminBookingsPage() {
   const [bookings, setBookings] = useState<AdminBookingItem[]>([]);
+  const [proEmails, setProEmails] = useState<Set<string>>(new Set());
+  const [proNames, setProNames] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -58,16 +114,29 @@ export default function AdminBookingsPage() {
 
   const loadBookings = useCallback(() => {
     setLoading(true);
-    fetchApi("/api/admin/bookings")
-      .then((data) => {
-        const list = Array.isArray(data)
-          ? data
-          : Array.isArray(data?.bookings)
-          ? data.bookings
-          : Array.isArray(data?.data)
-          ? data.data
-          : [];
+    Promise.all([
+      fetchApi("/api/admin/bookings"),
+      fetchApi("/api/admin/users").catch(() => []),
+    ])
+      .then(([data, usersData]) => {
+        const list = extractList(data);
         setBookings(list);
+
+        const usersList = extractList(usersData);
+        const emailsSet = new Set<string>();
+        const namesSet = new Set<string>();
+
+        for (const u of usersList) {
+          if (isProActiveFromFields(u)) {
+            const emailKey = String(u?.email || "").trim().toLowerCase();
+            const nameKey = String(u?.name || "").trim().toLowerCase();
+            if (emailKey) emailsSet.add(emailKey);
+            if (nameKey) namesSet.add(nameKey);
+          }
+        }
+
+        setProEmails(emailsSet);
+        setProNames(namesSet);
       })
       .catch((err) => {
         console.error(err);
@@ -79,6 +148,21 @@ export default function AdminBookingsPage() {
   useEffect(() => {
     loadBookings();
   }, [loadBookings]);
+
+  const isBookingTechnicianPro = (booking: AdminBookingItem): boolean => {
+    if (isProActiveFromFields(booking)) return true;
+
+    const techEmail = String(booking?.technicianEmail || "")
+      .trim()
+      .toLowerCase();
+    const techName = String(booking?.technicianName || "")
+      .trim()
+      .toLowerCase();
+
+    if (techEmail && proEmails.has(techEmail)) return true;
+    if (techName && proNames.has(techName)) return true;
+    return false;
+  };
 
   const filteredBookings =
     filter === "all"
@@ -217,6 +301,7 @@ export default function AdminBookingsPage() {
                     "in-progress",
                     "completed",
                   ].includes(b.status);
+                  const isTechPro = isBookingTechnicianPro(b);
 
                   const statusBadgeStyle =
                     b.status === "completed"
@@ -243,7 +328,15 @@ export default function AdminBookingsPage() {
                       </td>
 
                       <td className="px-6 py-3.5 text-sm font-semibold text-gray-800 whitespace-nowrap">
-                        {b.technicianName || "Technician"}
+                        <div className="inline-flex items-center gap-2">
+                          <span>{b.technicianName || "Technician"}</span>
+                          {isTechPro && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white text-[10px] font-extrabold tracking-wider uppercase shadow-2xs">
+                              <Crown size={10} />
+                              <span>PRO</span>
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       <td className="px-6 py-3.5 text-sm font-semibold text-gray-800 whitespace-nowrap">

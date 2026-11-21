@@ -10,6 +10,8 @@ import Image from "next/image";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 
+const GOOGLE_OAUTH_PENDING_KEY = "fixlab_google_oauth_pending";
+
 function getSafeRedirect(raw: string | null): string | null {
   if (!raw) return null;
   if (raw.startsWith("/") && !raw.startsWith("//")) {
@@ -32,7 +34,7 @@ function SignInForm() {
   useEffect(() => {
     if (!isSessionPending && session?.user) {
       const role = (session.user as any)?.role || "customer";
-      router.replace(redirectTarget || `/dashboard/${role}`);
+      router.push(redirectTarget || `/dashboard/${role}`);
     }
   }, [isSessionPending, session, redirectTarget, router]);
 
@@ -85,6 +87,7 @@ function SignInForm() {
           formData.email.split("@")[0];
 
         toast.welcome(resolvedName, {
+          duration: 2600,
           persistAcrossRedirect: true,
         });
 
@@ -104,16 +107,18 @@ function SignInForm() {
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     try {
-      toast.info("Redirecting to Google sign-in...", {
-        persistAcrossRedirect: true,
-      });
-
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem(GOOGLE_OAUTH_PENDING_KEY, "1");
+      }
       const callbackURL = redirectTarget || "/dashboard";
       await authClient.signIn.social({
         provider: "google",
         callbackURL,
       });
     } catch (error: any) {
+      if (typeof window !== "undefined") {
+        sessionStorage.removeItem(GOOGLE_OAUTH_PENDING_KEY);
+      }
       toast.error(error?.message || "Google sign-in failed");
       setGoogleLoading(false);
     }

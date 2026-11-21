@@ -10,8 +10,39 @@ import {
   Wrench,
   Loader2,
   Sparkles,
+  Crown,
 } from "lucide-react";
 import { fetchApi } from "@/lib/api";
+
+function isProEntryActive(entry: any): boolean {
+  if (!entry) return false;
+
+  const rawPro = Boolean(
+    entry?.isVerifiedPro ||
+      entry?.technicianIsVerifiedPro ||
+      entry?.plan === "pro" ||
+      entry?.technicianPlan === "pro" ||
+      entry?.user?.isVerifiedPro ||
+      entry?.user?.plan === "pro"
+  );
+
+  if (!rawPro) return false;
+
+  const expiresAt =
+    entry?.proExpiresAt ||
+    entry?.technicianProExpiresAt ||
+    entry?.user?.proExpiresAt ||
+    null;
+
+  if (expiresAt) {
+    const expiryMs = new Date(expiresAt).getTime();
+    if (!Number.isNaN(expiryMs) && expiryMs <= Date.now()) {
+      return false;
+    }
+  }
+
+  return true;
+}
 
 export default function TopTechnicians() {
   const [technicians, setTechnicians] = useState<any[]>([]);
@@ -61,6 +92,9 @@ export default function TopTechnicians() {
                 rating: srv.rating,
                 reviews: srv.reviews,
                 image: srv.technicianImage || srv.avatar || "",
+                isVerifiedPro: srv.isVerifiedPro,
+                plan: srv.plan,
+                proExpiresAt: srv.proExpiresAt,
               });
             }
           });
@@ -78,7 +112,11 @@ export default function TopTechnicians() {
 
   const getTechWorks = (tech: any) => {
     const techEmail = String(
-      tech.email || tech.technicianEmail || tech.userEmail || tech.contactEmail || ""
+      tech.email ||
+        tech.technicianEmail ||
+        tech.userEmail ||
+        tech.contactEmail ||
+        ""
     )
       .trim()
       .toLowerCase();
@@ -100,7 +138,11 @@ export default function TopTechnicians() {
     });
   };
 
-  const getTechnicianProfileHref = (tech: any, techWorks: any[], index: number) => {
+  const getTechnicianProfileHref = (
+    tech: any,
+    techWorks: any[],
+    index: number
+  ) => {
     const matchedWorkEmail = String(
       techWorks[0]?.technicianEmail ||
         techWorks[0]?.email ||
@@ -169,6 +211,10 @@ export default function TopTechnicians() {
           {technicians.map((tech, index) => {
             const techWorks = getTechWorks(tech);
             const profileHref = getTechnicianProfileHref(tech, techWorks, index);
+            const isPro =
+              isProEntryActive(tech) ||
+              techWorks.some((work: any) => isProEntryActive(work));
+
             const displayImage =
               tech.image ||
               `https://ui-avatars.com/api/?name=${encodeURIComponent(
@@ -207,15 +253,24 @@ export default function TopTechnicians() {
                   </div>
                 </Link>
 
-                {/* Name & Specialty */}
-                {tech.name && (
-                  <Link
-                    href={profileHref}
-                    className="text-lg font-extrabold text-gray-900 group-hover:text-[#ff5722] transition-colors mb-1 text-center line-clamp-1"
-                  >
-                    {tech.name}
-                  </Link>
-                )}
+                {/* Name + PRO Badge */}
+                <div className="flex items-center justify-center gap-1.5 flex-wrap mb-1">
+                  {tech.name && (
+                    <Link
+                      href={profileHref}
+                      className="text-lg font-extrabold text-gray-900 group-hover:text-[#ff5722] transition-colors text-center line-clamp-1"
+                    >
+                      {tech.name}
+                    </Link>
+                  )}
+
+                  {isPro && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white text-[10px] font-extrabold tracking-wider uppercase shrink-0 shadow-2xs">
+                      <Crown size={11} />
+                      <span>PRO</span>
+                    </span>
+                  )}
+                </div>
 
                 {badgeText && (
                   <p className="text-xs font-bold text-[#ff5722] bg-[#ff5722]/10 border border-[#ff5722]/20 px-3 py-1 rounded-full mb-3 flex items-center gap-1.5 line-clamp-1">

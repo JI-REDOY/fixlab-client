@@ -10,6 +10,8 @@ import Image from "next/image";
 import { ArrowRight, User, Wrench, UploadCloud, Eye, EyeOff } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 
+const GOOGLE_OAUTH_PENDING_KEY = "fixlab_google_oauth_pending";
+
 function getSafeRedirect(raw: string | null): string | null {
   if (!raw) return null;
   if (raw.startsWith("/") && !raw.startsWith("//")) {
@@ -152,13 +154,16 @@ function SignUpForm() {
       const data = await res.json();
       if (data.token) localStorage.setItem("fixlab_token", data.token);
 
-      toast.success("Account created successfully!");
-      router.push(targetAfterAuth);
+      toast.success("Account created successfully!", {
+        duration: 2400,
+        persistAcrossRedirect: true,
+      });
+      router.replace(targetAfterAuth);
     } catch {
       toast.error(
         "Account created, but failed to generate session token. Please sign in again."
       );
-      router.push(
+      router.replace(
         redirectTarget
           ? `/sign-in?redirect=${encodeURIComponent(redirectTarget)}`
           : "/sign-in"
@@ -171,15 +176,17 @@ function SignUpForm() {
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     try {
-      toast.success("Welcome back! Signed in with Google.", {
-        persistAcrossRedirect: true,
-      });
-
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem(GOOGLE_OAUTH_PENDING_KEY, "1");
+      }
       await authClient.signIn.social({
         provider: "google",
         callbackURL: redirectTarget || "/dashboard",
       });
     } catch (error: any) {
+      if (typeof window !== "undefined") {
+        sessionStorage.removeItem(GOOGLE_OAUTH_PENDING_KEY);
+      }
       toast.error(error?.message || "Google sign-in failed");
       setGoogleLoading(false);
     }

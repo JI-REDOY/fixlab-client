@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { loadStripe } from "@stripe/stripe-js";
 import {
   Elements,
@@ -102,7 +103,7 @@ function StripeCustomCheckoutForm({
 
   return (
     <form onSubmit={handlePay} className="space-y-4">
-      <div className="rounded-2xl bg-white/75 border border-white ring-1 ring-slate-900/10 p-3.5 space-y-1 text-xs">
+      <div className="rounded-2xl bg-slate-50 border border-slate-200 p-3.5 space-y-1.5 text-xs">
         <div className="flex justify-between">
           <span className="font-semibold text-gray-500">Technician</span>
           <span className="font-extrabold text-gray-900">
@@ -121,7 +122,7 @@ function StripeCustomCheckoutForm({
             {serviceTitle || "Repair Service"}
           </span>
         </div>
-        <div className="pt-1.5 border-t border-slate-200/80 flex items-center justify-between">
+        <div className="pt-1.5 border-t border-slate-200 flex items-center justify-between">
           <span className="font-extrabold text-gray-800">Total Amount</span>
           <span className="text-base font-black text-[#ff5722]">${amount}</span>
         </div>
@@ -140,7 +141,7 @@ function StripeCustomCheckoutForm({
             value={billingName}
             onChange={(e) => setBillingName(e.target.value)}
             placeholder="Full name"
-            className="w-full px-3.5 py-2 rounded-xl bg-white/90 border border-white ring-1 ring-slate-900/15 text-xs font-bold text-gray-900 outline-none focus:ring-2 focus:ring-[#ff5722]/40 disabled:opacity-60"
+            className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-gray-900 outline-none focus:border-[#ff5722] focus:bg-white disabled:opacity-60"
           />
         </div>
 
@@ -156,12 +157,12 @@ function StripeCustomCheckoutForm({
             value={billingEmail}
             onChange={(e) => setBillingEmail(e.target.value)}
             placeholder="email@example.com"
-            className="w-full px-3.5 py-2 rounded-xl bg-white/90 border border-white ring-1 ring-slate-900/15 text-xs font-bold text-gray-900 outline-none focus:ring-2 focus:ring-[#ff5722]/40 disabled:opacity-60"
+            className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-gray-900 outline-none focus:border-[#ff5722] focus:bg-white disabled:opacity-60"
           />
         </div>
       </div>
 
-      <div className="rounded-2xl bg-white/90 border border-white ring-1 ring-slate-900/15 p-3.5 max-h-[240px] overflow-y-auto">
+      <div className="rounded-2xl bg-slate-50 border border-slate-200 p-3.5 max-h-[240px] overflow-y-auto">
         <PaymentElement
           options={{
             layout: "tabs",
@@ -185,14 +186,14 @@ function StripeCustomCheckoutForm({
           type="button"
           disabled={submitting}
           onClick={onClose}
-          className="flex-1 py-3 rounded-full bg-white/60 hover:bg-white/90 border border-white text-gray-900 text-xs sm:text-sm font-extrabold transition-all cursor-pointer disabled:opacity-60"
+          className="flex-1 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 text-gray-800 text-xs font-extrabold cursor-pointer disabled:opacity-60"
         >
-          Cancel
+          Close
         </button>
         <button
           type="submit"
           disabled={!stripe || submitting}
-          className="flex-1 py-3 rounded-full bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] hover:from-[#e64a19] hover:to-[#ff5722] text-white text-xs sm:text-sm font-extrabold shadow-[6px_6px_16px_rgba(255,87,34,0.34)] inline-flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-60"
+          className="flex-1 py-2.5 rounded-full bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] hover:from-[#e64a19] hover:to-[#ff5722] text-white text-xs font-extrabold shadow-[6px_6px_15px_rgba(255,87,34,0.34)] inline-flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60"
         >
           {submitting ? (
             <>
@@ -234,7 +235,12 @@ export default function CardPaymentModal({
   onSuccess: () => void;
   onClose: () => void;
 }) {
+  const [mounted, setMounted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!open || submitting) return;
@@ -245,28 +251,30 @@ export default function CardPaymentModal({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [open, submitting, onClose]);
 
-  if (!open || !clientSecret) return null;
+  if (!mounted || typeof document === "undefined" || !open || !clientSecret) {
+    return null;
+  }
 
   const safeClose = () => {
     if (!submitting) onClose();
   };
 
-  return (
+  return createPortal(
     <div
       onClick={safeClose}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 backdrop-blur-[2px] p-4"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-lg rounded-[2rem] bg-white/85 backdrop-blur-xl border border-white ring-1 ring-slate-900/15 p-6 sm:p-7 shadow-[16px_16px_36px_rgba(15,23,42,0.22),-10px_-10px_24px_rgba(255,255,255,0.95)]"
+        className="w-full max-w-lg rounded-[2rem] bg-white border border-slate-200 ring-1 ring-slate-900/15 p-5 sm:p-6 shadow-[0_24px_60px_rgba(15,23,42,0.35)]"
       >
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-3">
           <div>
-            <h3 className="text-lg font-extrabold text-gray-900">
+            <h3 className="text-base font-extrabold text-gray-900">
               Complete <span className="text-[#ff5722]">Payment</span>
             </h3>
-            <p className="text-xs font-medium text-gray-600">
-              Stripe checkout features inside your custom modal
+            <p className="text-[11px] font-semibold text-gray-500">
+              Stripe checkout inside your modal
             </p>
           </div>
           <button
@@ -274,9 +282,9 @@ export default function CardPaymentModal({
             disabled={submitting}
             onClick={safeClose}
             aria-label="Close modal"
-            className="w-8 h-8 rounded-full bg-white/70 hover:bg-white text-gray-700 hover:text-[#ff5722] border border-white flex items-center justify-center transition-all cursor-pointer disabled:opacity-60"
+            className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-gray-700 flex items-center justify-center cursor-pointer disabled:opacity-60"
           >
-            <X size={16} />
+            <X size={15} />
           </button>
         </div>
 
@@ -294,7 +302,7 @@ export default function CardPaymentModal({
                 theme: "stripe",
                 variables: {
                   colorPrimary: "#ff5722",
-                  borderRadius: "14px",
+                  borderRadius: "12px",
                 },
               },
             }}
@@ -314,6 +322,7 @@ export default function CardPaymentModal({
           </Elements>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

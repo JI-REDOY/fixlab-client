@@ -11,6 +11,7 @@ import {
   Mail,
   ShieldCheck,
   UserCog,
+  Crown,
 } from "lucide-react";
 
 const PAGE_SIZE = 6;
@@ -21,6 +22,23 @@ interface AdminUserItem {
   email?: string;
   image?: string;
   role: string;
+  plan?: string;
+  isVerifiedPro?: boolean;
+  proExpiresAt?: string | null;
+}
+
+function isUserProActive(user: AdminUserItem): boolean {
+  const rawPro = Boolean(user?.plan === "pro" || user?.isVerifiedPro);
+  if (!rawPro) return false;
+
+  if (user?.proExpiresAt) {
+    const expiryMs = new Date(user.proExpiresAt).getTime();
+    if (!Number.isNaN(expiryMs) && expiryMs <= Date.now()) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 export default function ManageUsersPage() {
@@ -165,6 +183,7 @@ export default function ManageUsersPage() {
               ) : (
                 paginatedUsers.map((user) => {
                   const displayName = user.name || "User";
+                  const isPro = isUserProActive(user);
                   const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(
                     displayName
                   )}&background=ff5722&color=fff&bold=true`;
@@ -188,9 +207,17 @@ export default function ManageUsersPage() {
                             alt={displayName}
                             className="w-10 h-10 rounded-full object-cover shrink-0 border-2 border-white/90 ring-1 ring-slate-900/10 shadow-[4px_4px_10px_rgba(15,23,42,0.1),-3px_-3px_8px_rgba(255,255,255,0.92)]"
                           />
-                          <p className="font-extrabold text-sm text-gray-900 group-hover:text-[#ff5722] transition-colors">
-                            {displayName}
-                          </p>
+                          <div className="inline-flex items-center gap-2 flex-wrap">
+                            <p className="font-extrabold text-sm text-gray-900 group-hover:text-[#ff5722] transition-colors">
+                              {displayName}
+                            </p>
+                            {isPro && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white text-[10px] font-extrabold tracking-wider uppercase shadow-2xs">
+                                <Crown size={10} />
+                                <span>PRO</span>
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </td>
 

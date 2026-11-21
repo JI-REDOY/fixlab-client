@@ -13,6 +13,7 @@ import {
   Users,
   CalendarCheck,
   Receipt,
+  Crown,
 } from "lucide-react";
 
 export type UserRole = "customer" | "technician" | "admin";
@@ -113,6 +114,11 @@ export const ROLE_NAV_ITEMS: Record<UserRole, NavItem[]> = {
       label: "Transactions",
       href: "/dashboard/admin/transactions",
       icon: Receipt,
+    },
+    {
+      label: "Pro Payments",
+      href: "/dashboard/admin/pro-payments",
+      icon: Crown,
     },
     {
       label: "Update Profile",

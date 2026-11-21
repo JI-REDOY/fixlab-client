@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
+import { fetchApi } from "@/lib/api";
 import {
   ArrowRight,
   Menu,
@@ -13,23 +14,105 @@ import {
   LogOut,
   ChevronDown,
   Sparkles,
+  Crown,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { toast } from "@/components/ui/CustomToast";
 
+const PRO_STORAGE_KEY = "fixlab_pro_subscription";
+
+function normalizeEmail(email?: string | null): string {
+  return String(email || "").trim().toLowerCase();
+}
+
+function hasActiveStoredPro(email?: string | null): boolean {
+  const target = normalizeEmail(email);
+  if (typeof window === "undefined" || !target) return false;
+  try {
+    const raw = localStorage.getItem(PRO_STORAGE_KEY);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.proExpiresAt || normalizeEmail(parsed?.email) !== target) {
+      return false;
+    }
+    return new Date(parsed.proExpiresAt).getTime() > Date.now();
+  } catch {
+    return false;
+  }
+}
+
+function isPayloadProActive(payload: any): boolean {
+  if (!payload || typeof payload !== "object") return false;
+  const targets = [
+    payload,
+    payload?.user,
+    payload?.data,
+    payload?.data?.user,
+    payload?.profile,
+    payload?.subscription,
+  ].filter(Boolean);
+
+  for (const item of targets) {
+    const planVal = String(
+      item?.plan || item?.subscriptionPlan || item?.tier || ""
+    )
+      .trim()
+      .toLowerCase();
+
+    const statusVal = String(
+      item?.subscriptionStatus || item?.proStatus || item?.status || ""
+    )
+      .trim()
+      .toLowerCase();
+
+    const hasFlag = Boolean(
+      item?.isVerifiedPro ||
+        item?.isPro ||
+        item?.pro ||
+        planVal === "pro" ||
+        planVal.includes("pro") ||
+        statusVal === "pro"
+    );
+
+    if (!hasFlag) continue;
+
+    const expiresAt =
+      item?.proExpiresAt ||
+      item?.subscriptionExpiresAt ||
+      item?.expiresAt ||
+      null;
+
+    if (expiresAt) {
+      const expiryMs = new Date(expiresAt).getTime();
+      if (!Number.isNaN(expiryMs) && expiryMs <= Date.now()) {
+        continue;
+      }
+    }
+
+    return true;
+  }
+
+  return false;
+}
+
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { data: session } = authClient.useSession();
+  const { data: session, isPending } = authClient.useSession();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [resolvedRole, setResolvedRole] = useState<string>("customer");
+  const [isProTechnician, setIsProTechnician] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsDropdownOpen(false);
       }
     }
@@ -50,9 +133,67 @@ export default function Navbar() {
     };
   }, []);
 
+  useEffect(() => {
+    const sessionRole = String((session?.user as any)?.role || "customer")
+      .trim()
+      .toLowerCase();
+    const sessionEmail = normalizeEmail(session?.user?.email);
+
+    setResolvedRole(sessionRole);
+
+    if (isPending) return;
+
+    if (!session?.user || !sessionEmail) {
+      setIsProTechnician(false);
+      return;
+    }
+
+    if (sessionRole !== "technician") {
+      setIsProTechnician(false);
+      return;
+    }
+
+    setIsProTechnician(
+      hasActiveStoredPro(sessionEmail) || isPayloadProActive(session)
+    );
+
+    let active = true;
+    fetchApi("/api/auth/me")
+      .then((meData) => {
+        if (!active) return;
+        const u = meData?.user || meData;
+        const dbRole = String(u?.role || sessionRole).trim().toLowerCase();
+        const dbEmail = normalizeEmail(u?.email) || sessionEmail;
+
+        setResolvedRole(dbRole);
+
+        if (dbRole !== "technician") {
+          setIsProTechnician(false);
+          return;
+        }
+
+        const proActive =
+          isPayloadProActive(u) ||
+          isPayloadProActive(meData) ||
+          hasActiveStoredPro(dbEmail);
+
+        setIsProTechnician(proActive);
+      })
+      .catch(() => {
+        if (!active) return;
+        setIsProTechnician(hasActiveStoredPro(sessionEmail));
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [session, isPending, pathname]);
+
   const handleSignOut = async () => {
     await authClient.signOut();
     localStorage.removeItem("fixlab_token");
+    localStorage.removeItem(PRO_STORAGE_KEY);
+    setIsProTechnician(false);
     toast.success("Signed out successfully");
     router.push("/");
   };
@@ -63,7 +204,12 @@ export default function Navbar() {
     { name: "How It Works", href: "/about" },
   ];
 
-  const dashboardLink = session ? `/dashboard/${session.user.role || "customer"}` : "#";
+  const activeRole = resolvedRole || (session?.user as any)?.role || "customer";
+  const isTechnician = String(activeRole).toLowerCase() === "technician";
+  const showProBadge = isTechnician && isProTechnician;
+  const isProRouteActive = pathname === "/dashboard/technician/pro";
+
+  const dashboardLink = session ? `/dashboard/${activeRole}` : "#";
   const avatarUrl =
     session?.user?.image ||
     `https://ui-avatars.com/api/?name=${encodeURIComponent(
@@ -155,9 +301,15 @@ export default function Navbar() {
                     alt="User"
                     className="w-8 h-8 rounded-full object-cover border border-[#ff5722]/50 shrink-0"
                   />
-                  <span className="text-sm font-bold text-white truncate max-w-[150px] lg:max-w-[190px]">
+                  <span className="text-sm font-bold text-white truncate max-w-[140px] lg:max-w-[175px]">
                     {session.user.name}
                   </span>
+                  {showProBadge && (
+                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white text-[9px] font-extrabold tracking-wider uppercase shrink-0">
+                      <Crown size={9} />
+                      <span>PRO</span>
+                    </span>
+                  )}
                   <ChevronDown
                     size={14}
                     className={`text-gray-200 transition-transform duration-300 shrink-0 ${
@@ -168,40 +320,71 @@ export default function Navbar() {
 
                 {/* Dropdown Menu */}
                 {isDropdownOpen && (
-                  <div className="absolute right-0 mt-3 w-68 bg-[#161616]/85 backdrop-blur-xl rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/20 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                  <div className="absolute right-0 mt-3 w-72 bg-[#161616]/90 backdrop-blur-xl rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/20 overflow-hidden animate-in fade-in slide-in-from-top-2">
                     <div className="p-4 border-b border-white/15 bg-gradient-to-r from-[#ff5722]/20 via-white/[0.04] to-transparent">
-                      <p className="font-extrabold text-white truncate">
-                        {session.user.name}
-                      </p>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <p className="font-extrabold text-white truncate">
+                          {session.user.name}
+                        </p>
+                        {showProBadge && (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white text-[9px] font-extrabold tracking-wider uppercase shrink-0">
+                            <Crown size={9} />
+                            <span>PRO</span>
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-gray-300 truncate mb-2.5">
                         {session.user.email}
                       </p>
                       <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#ff5722]/25 text-[#ff8a65] text-[10px] font-extrabold uppercase rounded-full tracking-wider border border-[#ff5722]/35">
-                        <Sparkles size={10} /> {session.user.role}
+                        <Sparkles size={10} /> {activeRole}
                       </span>
                     </div>
+
                     <div className="p-2 flex flex-col gap-1">
                       <Link
                         href={dashboardLink}
                         onClick={() => setIsDropdownOpen(false)}
                         className="flex items-center gap-3 px-3.5 py-2.5 text-sm font-bold text-gray-200 hover:bg-white/10 hover:text-white rounded-2xl transition-colors"
                       >
-                        <LayoutDashboard size={18} className="text-[#ff5722]" /> Dashboard
+                        <LayoutDashboard size={18} className="text-[#ff5722]" />{" "}
+                        Dashboard
                       </Link>
                       <Link
                         href="/dashboard/profile"
                         onClick={() => setIsDropdownOpen(false)}
                         className="flex items-center gap-3 px-3.5 py-2.5 text-sm font-bold text-gray-200 hover:bg-white/10 hover:text-white rounded-2xl transition-colors"
                       >
-                        <User size={18} className="text-[#ff5722]" /> Update Profile
+                        <User size={18} className="text-[#ff5722]" /> Update
+                        Profile
                       </Link>
+
                       <div className="h-px bg-white/15 my-1" />
+
                       <button
                         onClick={handleSignOut}
-                        className="flex items-center gap-3 px-3.5 py-2.5 text-sm font-bold text-red-300 hover:bg-red-500/15 hover:text-red-200 rounded-2xl transition-colors w-full text-left cursor-pointer"
+                        className="flex items-center justify-center gap-2 px-3.5 py-2.5 text-xs font-extrabold text-gray-200 hover:text-red-200 bg-white/5 hover:bg-red-500/15 border border-white/15 rounded-2xl transition-colors w-full cursor-pointer"
                       >
-                        <LogOut size={18} /> Sign Out
+                        <LogOut size={15} />
+                        <span>Sign Out</span>
                       </button>
+
+                      {isTechnician && (
+                        <Link
+                          href="/dashboard/technician/pro"
+                          onClick={() => setIsDropdownOpen(false)}
+                          className={`w-full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-2xl text-xs font-extrabold transition-all mt-1 ${
+                            isProRouteActive
+                              ? "bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white shadow-[0_6px_14px_rgba(255,87,34,0.3)]"
+                              : "bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white hover:opacity-95 shadow-[0_4px_12px_rgba(255,87,34,0.22)]"
+                          }`}
+                        >
+                          <Sparkles size={15} />
+                          <span>
+                            {showProBadge ? "Pro Active" : "Get Pro"}
+                          </span>
+                        </Link>
+                      )}
                     </div>
                   </div>
                 )}
@@ -221,7 +404,7 @@ export default function Navbar() {
 
         {/* Mobile Menu Dropdown */}
         {isMobileMenuOpen && (
-          <div className="md:hidden mt-3 bg-[#161616]/85 backdrop-blur-xl rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.45)] border border-white/20 overflow-hidden animate-in fade-in slide-in-from-top-4">
+          <div className="md:hidden mt-3 bg-[#161616]/90 backdrop-blur-xl rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.45)] border border-white/20 overflow-hidden animate-in fade-in slide-in-from-top-4">
             <nav className="flex flex-col p-4 gap-2">
               {navItems.map((item) => {
                 const isActive = pathname === item.href;
@@ -268,21 +451,31 @@ export default function Navbar() {
                       alt="User"
                       className="w-10 h-10 rounded-full border border-[#ff5722]/40 shrink-0"
                     />
-                    <div className="min-w-0">
-                      <p className="font-bold text-sm text-white truncate">
-                        {session.user.name}
-                      </p>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <p className="font-bold text-sm text-white truncate">
+                          {session.user.name}
+                        </p>
+                        {showProBadge && (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white text-[9px] font-extrabold tracking-wider uppercase shrink-0">
+                            <Crown size={9} />
+                            <span>PRO</span>
+                          </span>
+                        )}
+                      </div>
                       <p className="text-[10px] uppercase font-extrabold text-[#ff8a65] tracking-wider">
-                        {session.user.role}
+                        {activeRole}
                       </p>
                     </div>
                   </div>
+
                   <Link
                     href={dashboardLink}
                     onClick={() => setIsMobileMenuOpen(false)}
                     className="px-4 py-3 text-sm font-bold text-gray-200 hover:bg-white/10 hover:text-white rounded-2xl flex items-center gap-3 transition-colors"
                   >
-                    <LayoutDashboard size={18} className="text-[#ff5722]" /> Dashboard
+                    <LayoutDashboard size={18} className="text-[#ff5722]" />{" "}
+                    Dashboard
                   </Link>
                   <Link
                     href="/dashboard/profile"
@@ -291,15 +484,32 @@ export default function Navbar() {
                   >
                     <User size={18} className="text-[#ff5722]" /> Profile
                   </Link>
+
                   <button
                     onClick={() => {
                       setIsMobileMenuOpen(false);
                       handleSignOut();
                     }}
-                    className="px-4 py-3 text-sm font-bold text-red-300 hover:bg-red-500/15 hover:text-red-200 rounded-2xl flex items-center gap-3 text-left transition-colors cursor-pointer"
+                    className="mt-1 px-4 py-2.5 text-xs font-extrabold text-gray-200 hover:text-red-200 bg-white/5 hover:bg-red-500/15 border border-white/15 rounded-2xl flex items-center justify-center gap-2 transition-colors cursor-pointer"
                   >
-                    <LogOut size={18} /> Sign Out
+                    <LogOut size={15} />
+                    <span>Sign Out</span>
                   </button>
+
+                  {isTechnician && (
+                    <Link
+                      href="/dashboard/technician/pro"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={`mt-1 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-extrabold transition-all ${
+                        isProRouteActive
+                          ? "bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white shadow-[0_6px_14px_rgba(255,87,34,0.3)]"
+                          : "bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white hover:opacity-95 shadow-[0_4px_12px_rgba(255,87,34,0.22)]"
+                      }`}
+                    >
+                      <Sparkles size={15} />
+                      <span>{showProBadge ? "Pro Active" : "Get Pro"}</span>
+                    </Link>
+                  )}
                 </div>
               )}
             </nav>
