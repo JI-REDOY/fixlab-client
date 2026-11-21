@@ -12,15 +12,23 @@ import {
   DollarSign,
   ShieldCheck,
   ToggleRight,
+  X,
 } from "lucide-react";
 import { toast } from "@/components/ui/CustomToast";
+import Pagination from "@/components/ui/Pagination";
 import { useState, useEffect, useCallback } from "react";
 import { fetchApi } from "@/lib/api";
+
+const PAGE_SIZE = 6;
 
 interface ServiceItem {
   _id: string;
   title?: string;
   category?: string;
+  description?: string;
+  estimatedDuration?: string;
+  serviceMode?: string;
+  serviceArea?: string;
   image?: string;
   basePrice?: number | string;
   approvalStatus?: string;
@@ -29,8 +37,29 @@ interface ServiceItem {
 
 export default function MyServicesPage() {
   const [services, setServices] = useState<ServiceItem[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+
+  // Delete Modal
+  const [serviceToDelete, setServiceToDelete] = useState<ServiceItem | null>(
+    null
+  );
+
+  // Edit Modal
+  const [editingService, setEditingService] = useState<ServiceItem | null>(
+    null
+  );
+  const [editForm, setEditForm] = useState({
+    title: "",
+    category: "Smartphone",
+    description: "",
+    basePrice: "",
+    estimatedDuration: "",
+    serviceMode: "Home Visit",
+    serviceArea: "",
+  });
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const loadServices = useCallback(() => {
     setLoading(true);
@@ -56,17 +85,69 @@ export default function MyServicesPage() {
     loadServices();
   }, [loadServices]);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this service?")) return;
+  const confirmDeleteService = async () => {
+    if (!serviceToDelete?._id) return;
+    const id = serviceToDelete._id;
     setBusyId(id);
     try {
       await fetchApi(`/api/services/${id}`, { method: "DELETE" });
       setServices((prev) => prev.filter((s) => s._id !== id));
       toast.success("Service deleted");
+      setServiceToDelete(null);
     } catch (err: any) {
       toast.error(err?.message || "Failed to delete service");
     } finally {
       setBusyId(null);
+    }
+  };
+
+  const openEditModal = (service: ServiceItem) => {
+    setEditingService(service);
+    setEditForm({
+      title: service.title || "",
+      category: service.category || "Smartphone",
+      description: service.description || "",
+      basePrice: String(service.basePrice ?? ""),
+      estimatedDuration: service.estimatedDuration || "",
+      serviceMode: service.serviceMode || "Home Visit",
+      serviceArea: service.serviceArea || "",
+    });
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingService?._id) return;
+
+    setSavingEdit(true);
+    try {
+      await fetchApi(`/api/services/${editingService._id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          ...editForm,
+          basePrice: Number(editForm.basePrice),
+          approvalStatus: "pending",
+        }),
+      });
+
+      setServices((prev) =>
+        prev.map((s) =>
+          s._id === editingService._id
+            ? {
+                ...s,
+                ...editForm,
+                basePrice: Number(editForm.basePrice),
+                approvalStatus: "pending",
+              }
+            : s
+        )
+      );
+
+      toast.success("Service updated! Waiting for admin re-approval.");
+      setEditingService(null);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to update service");
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -79,18 +160,23 @@ export default function MyServicesPage() {
       });
       setServices((prev) =>
         prev.map((s) =>
-          s._id === id
-            ? { ...s, isAvailable: !currentStatus, approvalStatus: "pending" }
-            : s
+          s._id === id ? { ...s, isAvailable: !currentStatus } : s
         )
       );
-      toast.success("Availability updated (Needs re-approval)");
+      toast.success("Availability updated!");
     } catch (err: any) {
       toast.error(err?.message || "Failed to update availability");
     } finally {
       setBusyId(null);
     }
   };
+
+  const totalPages = Math.max(1, Math.ceil(services.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedServices = services.slice(
+    (safePage - 1) * PAGE_SIZE,
+    safePage * PAGE_SIZE
+  );
 
   if (loading) {
     return (
@@ -102,7 +188,6 @@ export default function MyServicesPage() {
 
   return (
     <div className="space-y-8 relative z-10">
-      {/* Transparent Soft UI Header Banner */}
       <div className="relative overflow-hidden rounded-[2rem] bg-transparent hover:bg-white/5 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/12 p-6 sm:p-8 shadow-[14px_14px_28px_rgba(15,23,42,0.13),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)] transition-all duration-300">
         <div className="relative z-10 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div>
@@ -127,8 +212,7 @@ export default function MyServicesPage() {
         </div>
       </div>
 
-      {/* Transparent Soft UI Table Card */}
-      <div className="relative overflow-hidden bg-transparent backdrop-blur-[1px] rounded-[2rem] border border-white/85 ring-1 ring-slate-900/12 shadow-[14px_14px_30px_rgba(15,23,42,0.14),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)]">
+      <div className="relative overflow-hidden bg-transparent backdrop-blur-[1px] rounded-[2rem] border border-white/85 ring-1 ring-slate-900/12 p-2 sm:p-4 shadow-[14px_14px_30px_rgba(15,23,42,0.14),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)]">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -164,7 +248,7 @@ export default function MyServicesPage() {
             </thead>
 
             <tbody className="divide-y divide-white/65">
-              {services.length === 0 ? (
+              {paginatedServices.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-16 text-center">
                     <div className="inline-flex flex-col items-center justify-center p-6 rounded-[1.75rem] bg-white/10 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/12 shadow-[10px_10px_22px_rgba(15,23,42,0.1),-8px_-8px_18px_rgba(255,255,255,0.92)]">
@@ -181,7 +265,7 @@ export default function MyServicesPage() {
                   </td>
                 </tr>
               ) : (
-                services.map((service) => {
+                paginatedServices.map((service) => {
                   const isAvailable = Boolean(service.isAvailable);
                   const isBusy = busyId === service._id;
                   const statusStyle =
@@ -196,7 +280,7 @@ export default function MyServicesPage() {
                       key={service._id}
                       className="group hover:bg-white/10 transition-all duration-200"
                     >
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-3.5">
                         <div className="flex items-center gap-3.5">
                           <div className="relative w-12 h-12 rounded-2xl overflow-hidden shrink-0 border border-white/90 ring-1 ring-slate-900/12 bg-white/10 shadow-[5px_5px_12px_rgba(15,23,42,0.1),-4px_-4px_10px_rgba(255,255,255,0.92)]">
                             <Image
@@ -218,13 +302,13 @@ export default function MyServicesPage() {
                         </div>
                       </td>
 
-                      <td className="px-6 py-4 text-sm font-extrabold whitespace-nowrap">
+                      <td className="px-6 py-3.5 text-sm font-extrabold whitespace-nowrap">
                         <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-[#ff5722]/25 text-[#ff5722] shadow-[3px_3px_8px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)]">
                           ${service.basePrice ?? 0}
                         </span>
                       </td>
 
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-3.5 whitespace-nowrap">
                         <span
                           className={`inline-block px-3.5 py-1 text-xs font-extrabold rounded-full capitalize bg-white/15 backdrop-blur-[1px] border border-white/90 ring-1 shadow-[3px_3px_8px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)] ${statusStyle}`}
                         >
@@ -232,7 +316,7 @@ export default function MyServicesPage() {
                         </span>
                       </td>
 
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-3.5 whitespace-nowrap">
                         <button
                           type="button"
                           disabled={isBusy}
@@ -254,11 +338,11 @@ export default function MyServicesPage() {
                         </button>
                       </td>
 
-                      <td className="px-6 py-4 text-right whitespace-nowrap">
+                      <td className="px-6 py-3.5 text-right whitespace-nowrap">
                         <div className="inline-flex items-center justify-end gap-2">
                           <button
                             type="button"
-                            onClick={() => toast.info("Edit modal coming soon")}
+                            onClick={() => openEditModal(service)}
                             title="Edit service"
                             className="p-2 text-blue-700 bg-white/15 hover:bg-blue-500/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-blue-500/25 rounded-xl shadow-[4px_4px_10px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)] transition-all cursor-pointer"
                           >
@@ -267,7 +351,7 @@ export default function MyServicesPage() {
                           <button
                             type="button"
                             disabled={isBusy}
-                            onClick={() => handleDelete(service._id)}
+                            onClick={() => setServiceToDelete(service)}
                             title="Delete service"
                             className="p-2 text-red-600 bg-white/15 hover:bg-red-500/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-red-500/25 rounded-xl shadow-[4px_4px_10px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)] transition-all disabled:opacity-60 cursor-pointer"
                           >
@@ -282,7 +366,206 @@ export default function MyServicesPage() {
             </tbody>
           </table>
         </div>
+
+        <div className="px-4 pb-2">
+          <Pagination
+            currentPage={safePage}
+            totalItems={services.length}
+            pageSize={PAGE_SIZE}
+            onPageChange={setCurrentPage}
+            itemLabel="services"
+          />
+        </div>
       </div>
+
+      {/* Edit Modal */}
+      {editingService && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[2px] p-4">
+          <div className="relative w-full max-w-lg rounded-[2rem] bg-white/90 backdrop-blur-xl border border-white ring-1 ring-slate-900/15 p-6 shadow-[16px_16px_34px_rgba(15,23,42,0.22)]">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-extrabold text-gray-900">
+                Edit <span className="text-[#ff5722]">Service</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setEditingService(null)}
+                className="p-2 rounded-full bg-slate-100 text-gray-700 hover:text-[#ff5722] cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Title
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editForm.title}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, title: e.target.value })
+                    }
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-sm font-semibold text-gray-900 outline-none focus:border-[#ff5722]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Category
+                  </label>
+                  <select
+                    value={editForm.category}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, category: e.target.value })
+                    }
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-sm font-semibold text-gray-900 outline-none focus:border-[#ff5722]"
+                  >
+                    <option>Smartphone</option>
+                    <option>Laptop & PC</option>
+                    <option>AC</option>
+                    <option>Refrigerator</option>
+                    <option>TV</option>
+                    <option>Washing Machine</option>
+                    <option>Electrical</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Base Price ($)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={editForm.basePrice}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, basePrice: e.target.value })
+                    }
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-sm font-semibold text-gray-900 outline-none focus:border-[#ff5722]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Duration
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editForm.estimatedDuration}
+                    onChange={(e) =>
+                      setEditForm({
+                        ...editForm,
+                        estimatedDuration: e.target.value,
+                      })
+                    }
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-sm font-semibold text-gray-900 outline-none focus:border-[#ff5722]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Service Mode
+                  </label>
+                  <select
+                    value={editForm.serviceMode}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, serviceMode: e.target.value })
+                    }
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-sm font-semibold text-gray-900 outline-none focus:border-[#ff5722]"
+                  >
+                    <option>Home Visit</option>
+                    <option>Shop Drop-off</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Service Area
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editForm.serviceArea}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, serviceArea: e.target.value })
+                    }
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-sm font-semibold text-gray-900 outline-none focus:border-[#ff5722]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Description
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  value={editForm.description}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, description: e.target.value })
+                  }
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-sm font-medium text-gray-900 outline-none focus:border-[#ff5722] resize-none"
+                />
+              </div>
+
+              <div className="flex gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingService(null)}
+                  className="flex-1 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 text-gray-800 text-xs font-extrabold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingEdit}
+                  className="flex-1 py-2.5 rounded-full bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white text-xs font-extrabold shadow-xs disabled:opacity-60 cursor-pointer"
+                >
+                  {savingEdit ? "Saving..." : "Save & Re-submit"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {serviceToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[2px] p-4">
+          <div className="relative w-full max-w-sm rounded-[2rem] bg-white/90 backdrop-blur-xl border border-white ring-1 ring-slate-900/15 p-6 shadow-[16px_16px_34px_rgba(15,23,42,0.22)]">
+            <h3 className="text-lg font-extrabold text-gray-900">
+              Delete <span className="text-red-600">Service?</span>
+            </h3>
+            <p className="text-xs font-medium text-gray-600 mt-1.5">
+              Are you sure you want to delete{" "}
+              <span className="font-bold text-gray-900">
+                {serviceToDelete.title || "this service"}
+              </span>
+              ?
+            </p>
+
+            <div className="flex gap-2.5 mt-6">
+              <button
+                type="button"
+                disabled={Boolean(busyId)}
+                onClick={() => setServiceToDelete(null)}
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-gray-800 text-xs font-extrabold rounded-full cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={Boolean(busyId)}
+                onClick={confirmDeleteService}
+                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-extrabold rounded-full disabled:opacity-60 cursor-pointer"
+              >
+                {busyId ? "Deleting..." : "Yes, Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

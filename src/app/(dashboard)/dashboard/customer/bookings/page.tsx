@@ -2,6 +2,12 @@
 
 import Image from "next/image";
 import { toast } from "@/components/ui/CustomToast";
+import Pagination from "@/components/ui/Pagination";
+import CardPaymentModal from "@/components/payment/CardPaymentModal";
+import ThermalReceiptModal, {
+  ReceiptPayload,
+} from "@/components/receipt/ThermalReceiptModal";
+import { bookingToReceipt } from "@/components/receipt/receiptMapper";
 import {
   CreditCard,
   Loader2,
@@ -11,10 +17,13 @@ import {
   Wrench,
   UserCheck,
   X,
+  Lock,
+  Printer,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { fetchApi } from "@/lib/api";
 
+const PAGE_SIZE = 6;
 const steps = ["requested", "accepted", "in-progress", "completed", "paid"];
 
 interface BookingItem {
@@ -22,6 +31,11 @@ interface BookingItem {
   serviceTitle?: string;
   serviceImage?: string;
   technicianName?: string;
+  technicianEmail?: string;
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  address?: string;
   preferredDate?: string;
   status: string;
   paymentStatus?: string;
@@ -32,9 +46,33 @@ interface BookingItem {
 
 export default function MyBookingsPage() {
   const [bookings, setBookings] = useState<BookingItem[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [processingId, setProcessingId] = useState<string | null>(null);
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [bookingToCancel, setBookingToCancel] = useState<BookingItem | null>(
+    null
+  );
+
+  // Thermal Receipt Modal State
+  const [activeReceipt, setActiveReceipt] = useState<ReceiptPayload | null>(
+    null
+  );
+
+  // Step 1: Summary Modal (Technician Name + Job ID + Amount)
+  const [paymentSummaryBooking, setPaymentSummaryBooking] =
+    useState<BookingItem | null>(null);
+  const [creatingIntent, setCreatingIntent] = useState(false);
+
+  // Step 2: Stripe Card Modal (Inside FixLab UI)
+  const [cardModalOpen, setCardModalOpen] = useState(false);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [activePaymentBooking, setActivePaymentBooking] =
+    useState<BookingItem | null>(null);
+  const [customerBilling, setCustomerBilling] = useState<{
+    name: string;
+    email: string;
+  }>({ name: "", email: "" });
 
   // Review Modal State
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
@@ -44,8 +82,8 @@ export default function MyBookingsPage() {
   const [rating, setRating] = useState(5);
   const [review, setReview] = useState("");
 
-  const fetchBookings = useCallback(() => {
-    setLoading(true);
+  const fetchBookings = useCallback((showSpinner = false) => {
+    if (showSpinner) setLoading(true);
     fetchApi("/api/bookings/my")
       .then((data) => {
         const list = Array.isArray(data)
@@ -65,35 +103,75 @@ export default function MyBookingsPage() {
   }, []);
 
   useEffect(() => {
-    fetchBookings();
+    fetchBookings(true);
   }, [fetchBookings]);
 
-  const handleCancel = async (id: string) => {
-    if (!confirm("Are you sure you want to cancel this request?")) return;
+  useEffect(() => {
+    if (creatingIntent || submittingReview || cancellingId) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (paymentSummaryBooking) setPaymentSummaryBooking(null);
+        else if (bookingToCancel) setBookingToCancel(null);
+        else if (reviewModalOpen) setReviewModalOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [
+    paymentSummaryBooking,
+    bookingToCancel,
+    reviewModalOpen,
+    creatingIntent,
+    submittingReview,
+    cancellingId,
+  ]);
+
+  const confirmCancelBooking = async () => {
+    if (!bookingToCancel?._id) return;
+    setCancellingId(bookingToCancel._id);
     try {
-      await fetchApi(`/api/bookings/${id}/cancel`, { method: "PATCH" });
+      await fetchApi(`/api/bookings/${bookingToCancel._id}/cancel`, {
+        method: "PATCH",
+      });
       toast.success("Booking cancelled");
-      fetchBookings();
+      setBookingToCancel(null);
+      fetchBookings(false);
     } catch (err: any) {
       toast.error(err?.message || "Could not cancel booking");
+    } finally {
+      setCancellingId(null);
     }
   };
 
-  const handlePayNow = async (bookingId: string) => {
-    setProcessingId(bookingId);
+  const handlePayNow = (booking: BookingItem) => {
+    setPaymentSummaryBooking(booking);
+  };
+
+  const handleProceedToCardModal = async () => {
+    if (!paymentSummaryBooking?._id) return;
+    setCreatingIntent(true);
     try {
-      const data = await fetchApi("/api/payments/create-checkout-session", {
+      const data = await fetchApi("/api/payments/create-intent", {
         method: "POST",
-        body: JSON.stringify({ bookingId }),
+        body: JSON.stringify({ bookingId: paymentSummaryBooking._id }),
       });
-      if (data?.url) {
-        window.location.href = data.url;
-      } else {
-        throw new Error("Checkout URL not received");
+
+      if (!data?.clientSecret) {
+        throw new Error("Could not initialize card payment");
       }
+
+      setCustomerBilling({
+        name: data?.customerName || paymentSummaryBooking.customerName || "",
+        email: data?.customerEmail || paymentSummaryBooking.customerEmail || "",
+      });
+      setActivePaymentBooking(paymentSummaryBooking);
+      setClientSecret(data.clientSecret);
+      setPaymentSummaryBooking(null);
+      setCardModalOpen(true);
     } catch (err: any) {
-      toast.error(err?.message || "Payment failed");
-      setProcessingId(null);
+      toast.error(err?.message || "Failed to start payment");
+    } finally {
+      setCreatingIntent(false);
     }
   };
 
@@ -115,13 +193,20 @@ export default function MyBookingsPage() {
       toast.success("Review submitted!");
       setReviewModalOpen(false);
       setSelectedBooking(null);
-      fetchBookings();
+      fetchBookings(false);
     } catch (err: any) {
       toast.error(err?.message || "Failed to submit review");
     } finally {
       setSubmittingReview(false);
     }
   };
+
+  const totalPages = Math.max(1, Math.ceil(bookings.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedBookings = bookings.slice(
+    (safePage - 1) * PAGE_SIZE,
+    safePage * PAGE_SIZE
+  );
 
   if (loading) {
     return (
@@ -131,9 +216,12 @@ export default function MyBookingsPage() {
     );
   }
 
+  const summaryAmount = Number(
+    paymentSummaryBooking?.finalAmount ?? paymentSummaryBooking?.basePrice ?? 0
+  );
+
   return (
     <div className="space-y-8 relative z-10">
-      {/* Transparent Soft UI Header Banner */}
       <div className="relative overflow-hidden rounded-[2rem] bg-transparent hover:bg-white/5 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/12 p-6 sm:p-8 shadow-[14px_14px_28px_rgba(15,23,42,0.13),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)] transition-all duration-300">
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -159,8 +247,7 @@ export default function MyBookingsPage() {
         </div>
       </div>
 
-      {/* Transparent Soft UI Card / Table Container */}
-      <div className="relative overflow-hidden bg-transparent backdrop-blur-[1px] rounded-[2rem] border border-white/85 ring-1 ring-slate-900/12 shadow-[14px_14px_30px_rgba(15,23,42,0.14),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)]">
+      <div className="relative overflow-hidden bg-transparent backdrop-blur-[1px] rounded-[2rem] border border-white/85 ring-1 ring-slate-900/12 p-2 sm:p-4 shadow-[14px_14px_30px_rgba(15,23,42,0.14),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)]">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -193,7 +280,7 @@ export default function MyBookingsPage() {
             </thead>
 
             <tbody className="divide-y divide-white/65">
-              {bookings.length === 0 ? (
+              {paginatedBookings.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-16 text-center">
                     <div className="inline-flex flex-col items-center justify-center p-6 rounded-[1.75rem] bg-white/10 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/12 shadow-[10px_10px_22px_rgba(15,23,42,0.1),-8px_-8px_18px_rgba(255,255,255,0.92)]">
@@ -210,22 +297,32 @@ export default function MyBookingsPage() {
                   </td>
                 </tr>
               ) : (
-                bookings.map((booking) => {
-                  const currentStep =
-                    booking.paymentStatus === "paid"
-                      ? 4
-                      : Math.max(0, steps.indexOf(booking.status));
+                paginatedBookings.map((booking) => {
+                  const isClosed = ["rejected", "cancelled"].includes(
+                    booking.status
+                  );
+                  const currentStep = isClosed
+                    ? -1
+                    : booking.paymentStatus === "paid"
+                    ? 4
+                    : Math.max(0, steps.indexOf(booking.status));
                   const price = booking.finalAmount ?? booking.basePrice ?? 0;
                   const formattedDate = booking.preferredDate
                     ? new Date(booking.preferredDate).toLocaleDateString()
                     : "—";
+
+                  const canPrintBookingReceipt = [
+                    "accepted",
+                    "in-progress",
+                    "completed",
+                  ].includes(booking.status);
 
                   return (
                     <tr
                       key={booking._id}
                       className="group hover:bg-white/10 transition-all duration-200"
                     >
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-3.5">
                         <div className="flex items-center gap-3.5">
                           <div className="relative w-12 h-12 rounded-2xl overflow-hidden shrink-0 border border-white/90 ring-1 ring-slate-900/12 bg-white/10 shadow-[5px_5px_12px_rgba(15,23,42,0.1),-4px_-4px_10px_rgba(255,255,255,0.92)]">
                             <Image
@@ -247,18 +344,17 @@ export default function MyBookingsPage() {
                         </div>
                       </td>
 
-                      <td className="px-6 py-4 text-sm font-bold text-gray-800 whitespace-nowrap">
+                      <td className="px-6 py-3.5 text-sm font-bold text-gray-800 whitespace-nowrap">
                         <span className="px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/10 shadow-[4px_4px_10px_rgba(15,23,42,0.08),-4px_-4px_10px_rgba(255,255,255,0.92)]">
                           {booking.technicianName || "Verified Tech"}
                         </span>
                       </td>
 
-                      <td className="px-6 py-4 text-sm font-semibold text-gray-800 whitespace-nowrap">
+                      <td className="px-6 py-3.5 text-sm font-semibold text-gray-800 whitespace-nowrap">
                         {formattedDate}
                       </td>
 
-                      {/* Timeline */}
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-3.5">
                         <div className="inline-flex flex-col px-3.5 py-2 rounded-2xl bg-white/10 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/10 shadow-[inset_1px_1px_3px_rgba(15,23,42,0.08),4px_4px_10px_rgba(15,23,42,0.08),-4px_-4px_10px_rgba(255,255,255,0.92)]">
                           <div className="flex items-center gap-1">
                             {steps.map((step, idx) => (
@@ -268,6 +364,8 @@ export default function MyBookingsPage() {
                                   className={`w-3 h-3 rounded-full transition-colors ${
                                     idx <= currentStep
                                       ? "bg-[#ff5722] shadow-[0_0_8px_rgba(255,87,34,0.5)]"
+                                      : isClosed && idx === 0
+                                      ? "bg-red-500"
                                       : "bg-slate-300/80"
                                   }`}
                                 />
@@ -283,7 +381,11 @@ export default function MyBookingsPage() {
                               </div>
                             ))}
                           </div>
-                          <p className="text-[11px] font-extrabold text-gray-800 mt-1.5 capitalize">
+                          <p
+                            className={`text-[11px] font-extrabold mt-1.5 capitalize ${
+                              isClosed ? "text-red-600" : "text-gray-800"
+                            }`}
+                          >
                             {booking.paymentStatus === "paid"
                               ? "Paid & Completed"
                               : booking.status.replace("-", " ")}
@@ -291,56 +393,66 @@ export default function MyBookingsPage() {
                         </div>
                       </td>
 
-                      {/* Actions */}
-                      <td className="px-6 py-4 text-right whitespace-nowrap">
-                        {booking.status === "requested" && (
-                          <button
-                            type="button"
-                            onClick={() => handleCancel(booking._id)}
-                            className="px-4 py-2 text-xs font-extrabold text-red-600 bg-white/15 hover:bg-red-500/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-red-500/30 rounded-full shadow-[5px_5px_12px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)] transition-all cursor-pointer"
-                          >
-                            Cancel
-                          </button>
-                        )}
-
-                        {booking.status === "completed" &&
-                          booking.paymentStatus === "unpaid" && (
+                      <td className="px-6 py-3.5 text-right whitespace-nowrap">
+                        <div className="inline-flex items-center justify-end gap-2">
+                          {booking.status === "requested" && (
                             <button
                               type="button"
-                              onClick={() => handlePayNow(booking._id)}
-                              disabled={processingId === booking._id}
-                              className="px-4 py-2 text-xs font-extrabold text-white bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] hover:from-[#e64a19] hover:to-[#ff5722] rounded-full transition-all inline-flex items-center gap-1.5 ml-auto shadow-[6px_6px_15px_rgba(255,87,34,0.34),-4px_-4px_10px_rgba(255,255,255,0.85)] disabled:opacity-60 cursor-pointer"
+                              onClick={() => setBookingToCancel(booking)}
+                              className="px-4 py-2 text-xs font-extrabold text-red-600 bg-white/15 hover:bg-red-500/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-red-500/30 rounded-full shadow-[5px_5px_12px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)] transition-all cursor-pointer"
                             >
-                              {processingId === booking._id ? (
-                                <Loader2 className="animate-spin" size={14} />
-                              ) : (
-                                <CreditCard size={14} />
-                              )}
-                              <span>Pay Now</span>
+                              Cancel
                             </button>
                           )}
 
-                        {booking.paymentStatus === "paid" && !booking.rating && (
-                          <button
-                            type="button"
-                            onClick={() => openReviewModal(booking)}
-                            className="px-4 py-2 text-xs font-extrabold text-[#ff5722] bg-white/15 hover:bg-[#ff5722]/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-[#ff5722]/35 rounded-full shadow-[5px_5px_12px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)] transition-all inline-flex items-center gap-1.5 ml-auto cursor-pointer"
-                          >
-                            <Star size={14} />
-                            <span>Rate Service</span>
-                          </button>
-                        )}
-
-                        {booking.paymentStatus === "paid" &&
-                          Boolean(booking.rating) && (
-                            <div className="inline-flex items-center justify-end gap-1 px-3.5 py-1.5 rounded-full bg-white/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-amber-500/30 shadow-[5px_5px_12px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)] text-xs font-extrabold text-amber-700">
-                              <Star
-                                size={13}
-                                className="text-amber-500 fill-amber-500"
-                              />
-                              <span>{booking.rating}.0 / 5</span>
-                            </div>
+                          {canPrintBookingReceipt && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setActiveReceipt(bookingToReceipt(booking))
+                              }
+                              className="px-3.5 py-2 text-xs font-extrabold text-gray-900 bg-white/25 hover:bg-white/45 backdrop-blur-[1px] border border-white/90 ring-1 ring-slate-900/15 rounded-full shadow-[5px_5px_12px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)] transition-all inline-flex items-center gap-1.5 cursor-pointer"
+                            >
+                              <Printer size={13} className="text-[#ff5722]" />
+                              <span>Receipt</span>
+                            </button>
                           )}
+
+                          {booking.status === "completed" &&
+                            booking.paymentStatus === "unpaid" && (
+                              <button
+                                type="button"
+                                onClick={() => handlePayNow(booking)}
+                                className="px-4 py-2 text-xs font-extrabold text-white bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] hover:from-[#e64a19] hover:to-[#ff5722] rounded-full transition-all inline-flex items-center gap-1.5 shadow-[6px_6px_15px_rgba(255,87,34,0.34),-4px_-4px_10px_rgba(255,255,255,0.85)] cursor-pointer"
+                              >
+                                <CreditCard size={14} />
+                                <span>Pay Now</span>
+                              </button>
+                            )}
+
+                          {booking.paymentStatus === "paid" &&
+                            !booking.rating && (
+                              <button
+                                type="button"
+                                onClick={() => openReviewModal(booking)}
+                                className="px-4 py-2 text-xs font-extrabold text-[#ff5722] bg-white/15 hover:bg-[#ff5722]/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-[#ff5722]/35 rounded-full shadow-[5px_5px_12px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)] transition-all inline-flex items-center gap-1.5 cursor-pointer"
+                              >
+                                <Star size={14} />
+                                <span>Rate Service</span>
+                              </button>
+                            )}
+
+                          {booking.paymentStatus === "paid" &&
+                            Boolean(booking.rating) && (
+                              <div className="inline-flex items-center justify-end gap-1 px-3.5 py-1.5 rounded-full bg-white/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-amber-500/30 shadow-[5px_5px_12px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)] text-xs font-extrabold text-amber-700">
+                                <Star
+                                  size={13}
+                                  className="text-amber-500 fill-amber-500"
+                                />
+                                <span>{booking.rating}.0 / 5</span>
+                              </div>
+                            )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -349,9 +461,182 @@ export default function MyBookingsPage() {
             </tbody>
           </table>
         </div>
+
+        <div className="px-4 pb-2">
+          <Pagination
+            currentPage={safePage}
+            totalItems={bookings.length}
+            pageSize={PAGE_SIZE}
+            onPageChange={setCurrentPage}
+            itemLabel="bookings"
+          />
+        </div>
       </div>
 
-      {/* Transparent Soft UI Review Modal */}
+      {/* 50mm x 75mm Thermal Receipt Modal */}
+      <ThermalReceiptModal
+        receipt={activeReceipt}
+        onClose={() => setActiveReceipt(null)}
+      />
+
+      {/* Job & Technician Summary Modal before Card Modal */}
+      {paymentSummaryBooking && (
+        <div
+          onClick={() => {
+            if (!creatingIntent) setPaymentSummaryBooking(null);
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 backdrop-blur-[2px] p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-md rounded-[2rem] bg-white/85 backdrop-blur-xl border border-white ring-1 ring-slate-900/15 p-6 sm:p-7 shadow-[16px_16px_36px_rgba(15,23,42,0.22),-10px_-10px_24px_rgba(255,255,255,0.95)]"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-extrabold text-gray-900">
+                  Job & <span className="text-[#ff5722]">Technician</span>
+                </h3>
+                <p className="text-xs font-medium text-gray-600">
+                  Confirm details before opening card form
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={creatingIntent}
+                onClick={() => setPaymentSummaryBooking(null)}
+                aria-label="Close modal"
+                className="w-8 h-8 rounded-full bg-white/70 hover:bg-white text-gray-700 hover:text-[#ff5722] border border-white flex items-center justify-center transition-all cursor-pointer disabled:opacity-60"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="rounded-2xl bg-white/80 border border-white ring-1 ring-slate-900/10 p-4 space-y-2.5 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-gray-500">Technician</span>
+                <span className="font-extrabold text-gray-900">
+                  {paymentSummaryBooking.technicianName || "Verified Tech"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-gray-500">Job / Booking ID</span>
+                <span className="font-mono font-bold text-gray-900">
+                  {paymentSummaryBooking._id}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-gray-500">Service</span>
+                <span className="font-extrabold text-gray-900 truncate max-w-[200px]">
+                  {paymentSummaryBooking.serviceTitle || "Repair Service"}
+                </span>
+              </div>
+              <div className="pt-2.5 border-t border-slate-200/80 flex items-center justify-between">
+                <span className="font-extrabold text-gray-800">Total Amount</span>
+                <span className="text-lg font-black text-[#ff5722]">
+                  ${summaryAmount}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex gap-2.5 mt-6">
+              <button
+                type="button"
+                disabled={creatingIntent}
+                onClick={() => setPaymentSummaryBooking(null)}
+                className="flex-1 py-3 bg-white/70 hover:bg-white border border-white text-gray-800 text-xs sm:text-sm font-extrabold rounded-full transition-all cursor-pointer disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={creatingIntent || summaryAmount <= 0}
+                onClick={handleProceedToCardModal}
+                className="flex-1 py-3 bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] hover:from-[#e64a19] hover:to-[#ff5722] text-white text-xs sm:text-sm font-extrabold rounded-full shadow-[6px_6px_16px_rgba(255,87,34,0.34)] inline-flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-60"
+              >
+                {creatingIntent ? (
+                  <>
+                    <Loader2 size={15} className="animate-spin" />
+                    <span>Loading...</span>
+                  </>
+                ) : (
+                  <>
+                    <Lock size={14} />
+                    <span>Payment</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* In-App Stripe Card Modal */}
+      <CardPaymentModal
+        open={cardModalOpen}
+        bookingId={activePaymentBooking?._id || ""}
+        technicianName={activePaymentBooking?.technicianName || "Verified Tech"}
+        serviceTitle={activePaymentBooking?.serviceTitle || "Repair Service"}
+        amount={Number(
+          activePaymentBooking?.finalAmount ??
+            activePaymentBooking?.basePrice ??
+            0
+        )}
+        customerName={customerBilling.name}
+        customerEmail={customerBilling.email}
+        clientSecret={clientSecret}
+        onClose={() => {
+          setCardModalOpen(false);
+          setClientSecret(null);
+        }}
+        onSuccess={() => {
+          setCardModalOpen(false);
+          setClientSecret(null);
+          setActivePaymentBooking(null);
+          fetchBookings(false);
+        }}
+      />
+
+      {/* Cancel Confirmation Modal */}
+      {bookingToCancel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[2px] p-4">
+          <div className="relative w-full max-w-sm rounded-[2rem] bg-white/85 backdrop-blur-xl border border-white ring-1 ring-slate-900/15 p-6 shadow-[16px_16px_34px_rgba(15,23,42,0.22),-10px_-10px_24px_rgba(255,255,255,0.92)]">
+            <h3 className="text-lg font-extrabold text-gray-900">
+              Cancel <span className="text-red-600">Booking?</span>
+            </h3>
+            <p className="text-xs font-medium text-gray-600 mt-1.5">
+              Are you sure you want to cancel{" "}
+              <span className="font-bold text-gray-900">
+                {bookingToCancel.serviceTitle || "this service request"}
+              </span>
+              ?
+            </p>
+
+            <div className="flex gap-2.5 mt-6">
+              <button
+                type="button"
+                disabled={Boolean(cancellingId)}
+                onClick={() => setBookingToCancel(null)}
+                className="flex-1 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-gray-800 text-xs font-extrabold rounded-full transition-all cursor-pointer"
+              >
+                Keep It
+              </button>
+              <button
+                type="button"
+                disabled={Boolean(cancellingId)}
+                onClick={confirmCancelBooking}
+                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-extrabold rounded-full shadow-xs transition-all inline-flex items-center justify-center gap-1.5 disabled:opacity-60 cursor-pointer"
+              >
+                {cancellingId ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : null}
+                <span>{cancellingId ? "Cancelling..." : "Yes, Cancel"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Review Modal */}
       {reviewModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[2px] p-4">
           <div className="relative w-full max-w-md rounded-[2rem] bg-white/25 backdrop-blur-[4px] border border-white/90 ring-1 ring-slate-900/15 p-6 sm:p-7 shadow-[16px_16px_34px_rgba(15,23,42,0.22),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.9)]">

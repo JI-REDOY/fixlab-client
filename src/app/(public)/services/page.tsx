@@ -35,7 +35,9 @@ function ServicesContent() {
 
   const [search, setSearch] = useState(searchParams.get("search") || "");
   const [category, setCategory] = useState(searchParams.get("category") || "All");
-  const [mode, setMode] = useState(searchParams.get("mode") || "All");
+  const [mode, setMode] = useState(
+    searchParams.get("serviceMode") || searchParams.get("mode") || "All"
+  );
   const [sort, setSort] = useState(searchParams.get("sort") || "newest");
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -45,46 +47,53 @@ function ServicesContent() {
   useEffect(() => {
     setSearch(searchParams.get("search") || "");
     setCategory(searchParams.get("category") || "All");
-    setMode(searchParams.get("mode") || "All");
+    setMode(
+      searchParams.get("serviceMode") || searchParams.get("mode") || "All"
+    );
     setSort(searchParams.get("sort") || "newest");
     setCurrentPage(1);
   }, [searchParams]);
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
 
-    const query = new URLSearchParams();
-    if (search.trim()) query.set("search", search.trim());
-    if (category !== "All") query.set("category", category);
-    if (mode !== "All") query.set("serviceMode", mode);
-    if (sort !== "newest") query.set("sort", sort);
+    const timer = setTimeout(() => {
+      if (!active) return;
+      setLoading(true);
 
-    const qs = query.toString();
-    router.replace(qs ? `/services?${qs}` : "/services", { scroll: false });
+      const query = new URLSearchParams();
+      if (search.trim()) query.set("search", search.trim());
+      if (category !== "All") query.set("category", category);
+      if (mode !== "All") query.set("serviceMode", mode);
+      if (sort !== "newest") query.set("sort", sort);
 
-    fetchApi(qs ? `/api/services?${qs}` : "/api/services")
-      .then((data) => {
-        if (!active) return;
-        const list = Array.isArray(data)
-          ? data
-          : Array.isArray(data?.services)
-          ? data.services
-          : Array.isArray(data?.data)
-          ? data.data
-          : [];
-        setServices(list);
-      })
-      .catch((err) => {
-        console.error(err);
-        if (active) setServices([]);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+      const qs = query.toString();
+      router.replace(qs ? `/services?${qs}` : "/services", { scroll: false });
+
+      fetchApi(qs ? `/api/services?${qs}` : "/api/services")
+        .then((data) => {
+          if (!active) return;
+          const list = Array.isArray(data)
+            ? data
+            : Array.isArray(data?.services)
+            ? data.services
+            : Array.isArray(data?.data)
+            ? data.data
+            : [];
+          setServices(list);
+        })
+        .catch((err) => {
+          console.error(err);
+          if (active) setServices([]);
+        })
+        .finally(() => {
+          if (active) setLoading(false);
+        });
+    }, 200);
 
     return () => {
       active = false;
+      clearTimeout(timer);
     };
   }, [search, category, mode, sort, router]);
 

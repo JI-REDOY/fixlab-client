@@ -2,6 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { fetchApi } from "@/lib/api";
+import Pagination from "@/components/ui/Pagination";
+import ThermalReceiptModal, {
+  ReceiptPayload,
+} from "@/components/receipt/ThermalReceiptModal";
+import { transactionToReceipt } from "@/components/receipt/receiptMapper";
 import {
   DollarSign,
   Loader2,
@@ -11,22 +16,37 @@ import {
   Hash,
   Calendar,
   TrendingUp,
+  Printer,
 } from "lucide-react";
+
+const PAGE_SIZE = 6;
 
 interface PaymentTransaction {
   _id: string;
+  bookingId?: string;
   customerName?: string;
+  customerEmail?: string;
   technicianName?: string;
+  technicianEmail?: string;
   serviceTitle?: string;
   transactionId?: string;
+  stripePaymentIntentId?: string;
   amount?: number | string;
+  currency?: string;
+  paymentStatus?: string;
+  cardBrand?: string;
+  cardLast4?: string;
   paidAt?: string;
   createdAt?: string;
 }
 
 export default function AdminTransactionsPage() {
   const [payments, setPayments] = useState<PaymentTransaction[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [activeReceipt, setActiveReceipt] = useState<ReceiptPayload | null>(
+    null
+  );
 
   const loadPayments = useCallback(() => {
     setLoading(true);
@@ -59,6 +79,13 @@ export default function AdminTransactionsPage() {
     0
   );
 
+  const totalPages = Math.max(1, Math.ceil(payments.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedPayments = payments.slice(
+    (safePage - 1) * PAGE_SIZE,
+    safePage * PAGE_SIZE
+  );
+
   if (loading) {
     return (
       <div className="flex justify-center py-24">
@@ -69,7 +96,6 @@ export default function AdminTransactionsPage() {
 
   return (
     <div className="space-y-8 relative z-10">
-      {/* Transparent Soft UI Header Banner */}
       <div className="relative overflow-hidden rounded-[2rem] bg-transparent hover:bg-white/5 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/12 p-6 sm:p-8 shadow-[14px_14px_28px_rgba(15,23,42,0.13),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)] transition-all duration-300">
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -95,7 +121,6 @@ export default function AdminTransactionsPage() {
         </div>
       </div>
 
-      {/* Transparent Soft UI Total Revenue Card */}
       <div className="group relative overflow-hidden bg-transparent hover:bg-white/8 backdrop-blur-[1px] p-6 rounded-[2rem] border border-white/85 ring-1 ring-slate-900/12 hover:ring-[#ff5722]/35 hover:border-[#ff5722]/50 shadow-[14px_14px_28px_rgba(15,23,42,0.13),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)] transition-all duration-300 flex items-center justify-between gap-4 w-full sm:w-96">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white border border-white/90 ring-1 ring-[#ff5722]/35 flex items-center justify-center shrink-0 shadow-[6px_6px_14px_rgba(255,87,34,0.3),-4px_-4px_10px_rgba(255,255,255,0.85)]">
@@ -117,8 +142,7 @@ export default function AdminTransactionsPage() {
         </span>
       </div>
 
-      {/* Transparent Soft UI Transactions Table Card */}
-      <div className="relative overflow-hidden bg-transparent backdrop-blur-[1px] rounded-[2rem] border border-white/85 ring-1 ring-slate-900/12 shadow-[14px_14px_30px_rgba(15,23,42,0.14),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)]">
+      <div className="relative overflow-hidden bg-transparent backdrop-blur-[1px] rounded-[2rem] border border-white/85 ring-1 ring-slate-900/12 p-2 sm:p-4 shadow-[14px_14px_30px_rgba(15,23,42,0.14),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)]">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -156,13 +180,16 @@ export default function AdminTransactionsPage() {
                     Date
                   </span>
                 </th>
+                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-800 uppercase tracking-wider text-right">
+                  Receipt
+                </th>
               </tr>
             </thead>
 
             <tbody className="divide-y divide-white/65">
-              {payments.length === 0 ? (
+              {paginatedPayments.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-16 text-center">
+                  <td colSpan={7} className="px-6 py-16 text-center">
                     <div className="inline-flex flex-col items-center justify-center p-6 rounded-[1.75rem] bg-white/10 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/12 shadow-[10px_10px_22px_rgba(15,23,42,0.1),-8px_-8px_18px_rgba(255,255,255,0.92)]">
                       <div className="w-14 h-14 rounded-2xl bg-white/15 border border-white/90 ring-1 ring-[#ff5722]/25 flex items-center justify-center text-[#ff5722] mb-3 shadow-[5px_5px_12px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)]">
                         <DollarSign size={24} />
@@ -177,7 +204,7 @@ export default function AdminTransactionsPage() {
                   </td>
                 </tr>
               ) : (
-                payments.map((t) => {
+                paginatedPayments.map((t) => {
                   const dateValue = t.paidAt || t.createdAt;
                   const formattedDate = dateValue
                     ? new Date(dateValue).toLocaleDateString()
@@ -188,19 +215,19 @@ export default function AdminTransactionsPage() {
                       key={t._id}
                       className="group hover:bg-white/10 transition-all duration-200"
                     >
-                      <td className="px-6 py-4 text-sm font-extrabold text-gray-900 group-hover:text-[#ff5722] transition-colors whitespace-nowrap">
+                      <td className="px-6 py-3.5 text-sm font-extrabold text-gray-900 group-hover:text-[#ff5722] transition-colors whitespace-nowrap">
                         {t.customerName || "Customer"}
                       </td>
 
-                      <td className="px-6 py-4 text-sm font-semibold text-gray-800 whitespace-nowrap">
+                      <td className="px-6 py-3.5 text-sm font-semibold text-gray-800 whitespace-nowrap">
                         {t.technicianName || "Technician"}
                       </td>
 
-                      <td className="px-6 py-4 text-sm font-semibold text-gray-800">
+                      <td className="px-6 py-3.5 text-sm font-semibold text-gray-800">
                         {t.serviceTitle || "Repair Service"}
                       </td>
 
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-3.5 whitespace-nowrap">
                         <span
                           title={t.transactionId || ""}
                           className="inline-block px-2.5 py-1 rounded-xl bg-white/15 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/10 text-xs font-mono font-semibold text-gray-800 truncate max-w-[120px] shadow-[3px_3px_8px_rgba(15,23,42,0.06),-2px_-2px_6px_rgba(255,255,255,0.92)]"
@@ -209,14 +236,27 @@ export default function AdminTransactionsPage() {
                         </span>
                       </td>
 
-                      <td className="px-6 py-4 text-sm font-extrabold whitespace-nowrap">
+                      <td className="px-6 py-3.5 text-sm font-extrabold whitespace-nowrap">
                         <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/15 backdrop-blur-[1px] border border-white/90 ring-1 ring-[#ff5722]/25 text-[#ff5722] shadow-[3px_3px_8px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)]">
                           ${Number(t.amount ?? 0)}
                         </span>
                       </td>
 
-                      <td className="px-6 py-4 text-sm font-semibold text-gray-800 whitespace-nowrap">
+                      <td className="px-6 py-3.5 text-sm font-semibold text-gray-800 whitespace-nowrap">
                         {formattedDate}
+                      </td>
+
+                      <td className="px-6 py-3.5 text-right whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setActiveReceipt(transactionToReceipt(t))
+                          }
+                          className="px-3 py-1.5 text-xs font-extrabold text-gray-900 bg-white/25 hover:bg-white/45 backdrop-blur-[1px] border border-white/90 ring-1 ring-slate-900/15 rounded-full shadow-[4px_4px_10px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)] inline-flex items-center gap-1 transition-all cursor-pointer"
+                        >
+                          <Printer size={13} className="text-[#ff5722]" />
+                          <span>Receipt</span>
+                        </button>
                       </td>
                     </tr>
                   );
@@ -225,7 +265,22 @@ export default function AdminTransactionsPage() {
             </tbody>
           </table>
         </div>
+
+        <div className="px-4 pb-2">
+          <Pagination
+            currentPage={safePage}
+            totalItems={payments.length}
+            pageSize={PAGE_SIZE}
+            onPageChange={setCurrentPage}
+            itemLabel="transactions"
+          />
+        </div>
       </div>
+
+      <ThermalReceiptModal
+        receipt={activeReceipt}
+        onClose={() => setActiveReceipt(null)}
+      />
     </div>
   );
 }

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { authClient } from "@/lib/auth-client";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "@/components/ui/CustomToast";
 import Link from "next/link";
 import { Input } from "@/components/ui/Input";
@@ -10,8 +10,20 @@ import Image from "next/image";
 import { ArrowRight, User, Wrench, UploadCloud, Eye, EyeOff } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 
-export default function SignUpPage() {
+function getSafeRedirect(raw: string | null): string | null {
+  if (!raw) return null;
+  if (raw.startsWith("/") && !raw.startsWith("//")) {
+    return raw;
+  }
+  return null;
+}
+
+function SignUpForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTarget = getSafeRedirect(searchParams.get("redirect"));
+  const { data: session, isPending: isSessionPending } = authClient.useSession();
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -25,6 +37,21 @@ export default function SignUpPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isSessionPending && session?.user) {
+      const role = (session.user as any)?.role || "customer";
+      router.replace(redirectTarget || `/dashboard/${role}`);
+    }
+  }, [isSessionPending, session, redirectTarget, router]);
+
+  if (isSessionPending || session?.user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center py-32 text-sm font-bold text-gray-600">
+        Redirecting...
+      </div>
+    );
+  }
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -48,7 +75,7 @@ export default function SignUpPage() {
       );
       const data = await res.json();
       if (data.success) {
-        setFormData({ ...formData, image: data.data.url });
+        setFormData((prev) => ({ ...prev, image: data.data.url }));
         toast.success("Image uploaded!");
       } else {
         toast.error("Image upload failed");
@@ -62,15 +89,24 @@ export default function SignUpPage() {
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
-    if (!formData.name) newErrors.name = "Name is required";
-    if (!formData.email) newErrors.email = "Email is required";
+    const trimmedName = formData.name.trim();
+    const trimmedEmail = formData.email.trim();
 
-    if (formData.password.length < 6)
+    if (!trimmedName) newErrors.name = "Name is required";
+
+    if (!trimmedEmail) {
+      newErrors.email = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      newErrors.email = "Please enter a valid email address";
+    }
+
+    if (formData.password.length < 6) {
       newErrors.password = "Password must be at least 6 characters";
-    else if (!/[A-Z]/.test(formData.password))
+    } else if (!/[A-Z]/.test(formData.password)) {
       newErrors.password = "Must contain an uppercase letter";
-    else if (!/[a-z]/.test(formData.password))
+    } else if (!/[a-z]/.test(formData.password)) {
       newErrors.password = "Must contain a lowercase letter";
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -81,15 +117,19 @@ export default function SignUpPage() {
     if (!validate()) return;
 
     setLoading(true);
+    const cleanName = formData.name.trim();
+    const cleanEmail = formData.email.trim();
+    const targetAfterAuth = redirectTarget || `/dashboard/${formData.role}`;
 
     const { error } = await authClient.signUp.email({
-      email: formData.email,
+      email: cleanEmail,
       password: formData.password,
-      name: formData.name,
+      name: cleanName,
       role: formData.role,
+      roleConfirmed: true,
       image: formData.image,
-      callbackURL: `/dashboard/${formData.role}`,
-    });
+      callbackURL: targetAfterAuth,
+    } as any);
 
     if (error) {
       toast.error(error.message || "Something went wrong");
@@ -103,7 +143,7 @@ export default function SignUpPage() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: formData.email }),
+          body: JSON.stringify({ email: cleanEmail }),
         }
       );
 
@@ -113,32 +153,37 @@ export default function SignUpPage() {
       if (data.token) localStorage.setItem("fixlab_token", data.token);
 
       toast.success("Account created successfully!");
-      router.push(`/dashboard/${formData.role}`);
+      router.push(targetAfterAuth);
     } catch {
       toast.error(
         "Account created, but failed to generate session token. Please sign in again."
       );
-      router.push("/sign-in");
+      router.push(
+        redirectTarget
+          ? `/sign-in?redirect=${encodeURIComponent(redirectTarget)}`
+          : "/sign-in"
+      );
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
-  try {
-    // ১. Google-এ রিডাইরেক্ট হওয়ার আগেই টোস্ট সেভ করে রাখবে
-    toast.success("Welcome back! Signed in with Google.", {
-      persistAcrossRedirect: true,
-    });
+    setGoogleLoading(true);
+    try {
+      toast.success("Welcome back! Signed in with Google.", {
+        persistAcrossRedirect: true,
+      });
 
-    await authClient.signIn.social({
-      provider: "google",
-      callbackURL: "/dashboard",
-    });
-  } catch (error: any) {
-    toast.error(error?.message || "Google sign-in failed");
-  }
-};
+      await authClient.signIn.social({
+        provider: "google",
+        callbackURL: redirectTarget || "/dashboard",
+      });
+    } catch (error: any) {
+      toast.error(error?.message || "Google sign-in failed");
+      setGoogleLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 py-32 relative overflow-hidden">
@@ -172,7 +217,7 @@ export default function SignUpPage() {
                 placeholder="John Doe"
                 value={formData.name}
                 onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
+                  setFormData((prev) => ({ ...prev, name: e.target.value }))
                 }
                 error={errors.name}
               />
@@ -182,7 +227,7 @@ export default function SignUpPage() {
                 placeholder="john@example.com"
                 value={formData.email}
                 onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
+                  setFormData((prev) => ({ ...prev, email: e.target.value }))
                 }
                 error={errors.email}
               />
@@ -194,7 +239,10 @@ export default function SignUpPage() {
                   placeholder="••••••••"
                   value={formData.password}
                   onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
+                    setFormData((prev) => ({
+                      ...prev,
+                      password: e.target.value,
+                    }))
                   }
                   error={errors.password}
                 />
@@ -262,7 +310,7 @@ export default function SignUpPage() {
                       value="customer"
                       checked={formData.role === "customer"}
                       onChange={() =>
-                        setFormData({ ...formData, role: "customer" })
+                        setFormData((prev) => ({ ...prev, role: "customer" }))
                       }
                       className="hidden"
                     />
@@ -298,7 +346,10 @@ export default function SignUpPage() {
                       value="technician"
                       checked={formData.role === "technician"}
                       onChange={() =>
-                        setFormData({ ...formData, role: "technician" })
+                        setFormData((prev) => ({
+                          ...prev,
+                          role: "technician",
+                        }))
                       }
                       className="hidden"
                     />
@@ -361,7 +412,11 @@ export default function SignUpPage() {
         <p className="text-center text-sm font-medium text-gray-700 mt-8">
           Already have an account?{" "}
           <Link
-            href="/sign-in"
+            href={
+              redirectTarget
+                ? `/sign-in?redirect=${encodeURIComponent(redirectTarget)}`
+                : "/sign-in"
+            }
             className="text-[#ff5722] font-bold hover:underline transition-all"
           >
             Sign In
@@ -369,5 +424,19 @@ export default function SignUpPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function SignUpPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center py-32 text-sm font-bold text-gray-600">
+          Loading...
+        </div>
+      }
+    >
+      <SignUpForm />
+    </Suspense>
   );
 }

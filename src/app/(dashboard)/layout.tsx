@@ -26,13 +26,17 @@ export default function DashboardLayout({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [dbRole, setDbRole] = useState<string | null>(null);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [hasVerifiedSession, setHasVerifiedSession] = useState(false);
+
   const pathname = usePathname();
   const router = useRouter();
   const sessionHook = authClient.useSession();
   const { data: session, isPending } = sessionHook;
 
   const checkRoleConfirmation = useCallback(async () => {
-    if (!session?.user?.email) return;
+    const email = session?.user?.email;
+    if (!email) return;
 
     try {
       if (!localStorage.getItem("fixlab_token")) {
@@ -43,32 +47,75 @@ export default function DashboardLayout({
       const user = meData?.user || meData;
 
       if (user) {
-        const currentRole = user.role || session.user.role || "customer";
+        const currentRole =
+          user.role || (session?.user as any)?.role || "customer";
         setDbRole(currentRole);
 
         const isAdmin = currentRole === "admin";
-        const isConfirmed = Boolean(user.roleConfirmed);
+        const isConfirmed =
+          Boolean(user.roleConfirmed) ||
+          Boolean((session?.user as any)?.roleConfirmed) ||
+          currentRole === "technician";
 
         setShowRoleModal(!isAdmin && !isConfirmed);
       }
     } catch (err) {
       console.error("Failed to check role confirmation:", err);
     }
-  }, [session?.user?.email, session?.user?.role]);
+  }, [session?.user]);
 
   useEffect(() => {
     if (session?.user?.email) {
+      setHasVerifiedSession(true);
+      setIsCheckingAuth(false);
       checkRoleConfirmation();
     }
   }, [session?.user?.email, checkRoleConfirmation]);
 
   useEffect(() => {
-    if (!isPending && !session) {
-      router.push("/sign-in");
-    }
-  }, [isPending, session, router]);
+    let active = true;
 
-  if (isPending) {
+    const verifySessionOnLoad = async () => {
+      if (isPending) return;
+
+      if (session?.user) {
+        if (active) {
+          setHasVerifiedSession(true);
+          setIsCheckingAuth(false);
+        }
+        return;
+      }
+
+      try {
+        const res = await authClient.getSession();
+        if (!active) return;
+
+        if (res?.data?.user) {
+          setHasVerifiedSession(true);
+          setIsCheckingAuth(false);
+        } else {
+          setHasVerifiedSession(false);
+          setIsCheckingAuth(false);
+          const callbackUrl = encodeURIComponent(pathname || "/dashboard");
+          router.replace(`/sign-in?callbackUrl=${callbackUrl}`);
+        }
+      } catch {
+        if (!active) return;
+        setHasVerifiedSession(false);
+        setIsCheckingAuth(false);
+        const callbackUrl = encodeURIComponent(pathname || "/dashboard");
+        router.replace(`/sign-in?callbackUrl=${callbackUrl}`);
+      }
+    };
+
+    verifySessionOnLoad();
+
+    return () => {
+      active = false;
+    };
+  }, [isPending, session?.user, pathname, router]);
+
+  if (isPending || isCheckingAuth) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f8f9fa]">
         <div className="w-10 h-10 border-4 border-[#ff5722] border-t-transparent rounded-full animate-spin" />
@@ -76,12 +123,12 @@ export default function DashboardLayout({
     );
   }
 
-  if (!session) return null;
+  if (!session && !hasVerifiedSession) return null;
 
-  const role: UserRole = normalizeRole(dbRole || (session.user as any)?.role);
-  const displayName = session.user.name || "User";
+  const role: UserRole = normalizeRole(dbRole || (session?.user as any)?.role);
+  const displayName = session?.user?.name || "User";
   const avatarUrl =
-    session.user.image ||
+    session?.user?.image ||
     `https://ui-avatars.com/api/?name=${encodeURIComponent(
       displayName
     )}&background=ff5722&color=fff&bold=true`;
@@ -122,6 +169,7 @@ export default function DashboardLayout({
     "/dashboard/technician/my-services": "My Services",
     "/dashboard/technician/services": "My Services",
     "/dashboard/technician/requests": "Requests",
+    "/dashboard/technician/transactions": "Transactions",
     "/dashboard/admin/users": "Users",
     "/dashboard/admin/role-requests": "Role Requests",
     "/dashboard/admin/services": "Services",
@@ -151,24 +199,21 @@ export default function DashboardLayout({
   };
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] flex relative overflow-hidden">
-      <FloatingIcons />
-
-      <div className="absolute top-0 left-0 w-[520px] h-[520px] bg-[#ff5722]/10 blur-[130px] rounded-full -translate-x-1/2 -translate-y-1/2 z-0 pointer-events-none" />
-      <div className="absolute bottom-0 right-0 w-[520px] h-[520px] bg-[#ff5722]/8 blur-[130px] rounded-full translate-x-1/3 translate-y-1/3 z-0 pointer-events-none" />
+    <div className="min-h-screen bg-[#f8f9fa] flex relative">
+      <div className="fixed inset-0 z-0 pointer-events-none select-none">
+        <FloatingIcons />
+      </div>
 
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-slate-950/35 z-40 lg:hidden backdrop-blur-xs transition-opacity"
+          className="fixed inset-0 bg-slate-950/35 z-40 lg:hidden"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
-      <div
-        className={`fixed lg:sticky top-0 left-0 z-50 h-screen p-3 lg:p-4 transition-transform duration-300 ease-in-out ${
-          isSidebarOpen
-            ? "translate-x-0"
-            : "-translate-x-full lg:translate-x-0"
+      <aside
+        className={`fixed lg:sticky top-0 left-0 z-50 lg:z-30 h-screen p-3 lg:p-4 transition-transform duration-200 ${
+          isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
         <div className="h-full flex flex-col">
@@ -176,9 +221,9 @@ export default function DashboardLayout({
             <Link
               href="/"
               onClick={() => setIsSidebarOpen(false)}
-              className="flex items-center gap-2 group"
+              className="flex items-center gap-2"
             >
-              <div className="p-1.5 bg-white/90 rounded-xl border border-white/80 shadow-2xs group-hover:border-[#ff5722]/30 transition-all">
+              <div className="p-1.5 bg-white rounded-xl border border-slate-200/80">
                 <Image
                   src="/icon-whiteTheme.png"
                   alt="FixLab"
@@ -200,7 +245,7 @@ export default function DashboardLayout({
               type="button"
               onClick={() => setIsSidebarOpen(false)}
               aria-label="Close menu"
-              className="lg:hidden p-1.5 rounded-xl bg-white/80 text-gray-700 hover:text-[#ff5722] cursor-pointer"
+              className="lg:hidden p-1.5 rounded-xl bg-white text-gray-700 hover:text-[#ff5722] cursor-pointer"
             >
               <X size={18} />
             </button>
@@ -215,23 +260,23 @@ export default function DashboardLayout({
             />
           </div>
         </div>
-      </div>
+      </aside>
 
       <main className="flex-1 flex flex-col min-w-0 relative z-10">
-        <header className="h-20 bg-white/60 backdrop-blur-xl border-b border-white/75 flex items-center justify-between px-4 sm:px-8 sticky top-0 z-30">
+        <header className="h-20 bg-white border-b border-slate-200/80 flex items-center justify-between px-4 sm:px-8 sticky top-0 z-20">
           <div className="flex items-center gap-3 sm:gap-5 min-w-0">
             <button
               type="button"
               onClick={() => setIsSidebarOpen(true)}
               aria-label="Open menu"
-              className="lg:hidden p-2 -ml-2 text-gray-700 hover:bg-white/80 rounded-xl transition-colors cursor-pointer"
+              className="lg:hidden p-2 -ml-2 text-gray-700 hover:bg-slate-100 rounded-xl cursor-pointer"
             >
               <Menu size={22} />
             </button>
 
             <Link
               href="/"
-              className="text-xs sm:text-sm font-bold text-gray-600 hover:text-[#ff5722] flex items-center gap-1.5 transition-colors shrink-0"
+              className="text-xs sm:text-sm font-bold text-gray-600 hover:text-[#ff5722] flex items-center gap-1.5 shrink-0"
             >
               <Home size={16} className="text-[#ff5722]" />
               <span>Back to Home</span>
@@ -257,7 +302,7 @@ export default function DashboardLayout({
             <img
               src={avatarUrl}
               alt={displayName}
-              className="w-10 h-10 rounded-full border-2 border-white shadow-xs object-cover"
+              className="w-10 h-10 rounded-full border border-slate-200 object-cover"
             />
           </div>
         </header>

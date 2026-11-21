@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "@/components/ui/CustomToast";
+import Pagination from "@/components/ui/Pagination";
 import {
   Check,
   X,
@@ -14,6 +15,7 @@ import {
 } from "lucide-react";
 import { fetchApi } from "@/lib/api";
 
+const PAGE_SIZE = 6;
 const filterTabs = ["all", "pending", "approved", "rejected"];
 
 interface AdminServiceItem {
@@ -27,6 +29,7 @@ interface AdminServiceItem {
 export default function AdminServicesPage() {
   const [services, setServices] = useState<AdminServiceItem[]>([]);
   const [filter, setFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
@@ -77,6 +80,13 @@ export default function AdminServicesPage() {
       ? services
       : services.filter((s) => s.approvalStatus === filter);
 
+  const totalPages = Math.max(1, Math.ceil(filteredServices.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedServices = filteredServices.slice(
+    (safePage - 1) * PAGE_SIZE,
+    safePage * PAGE_SIZE
+  );
+
   if (loading) {
     return (
       <div className="flex justify-center py-24">
@@ -87,7 +97,6 @@ export default function AdminServicesPage() {
 
   return (
     <div className="space-y-8 relative z-10">
-      {/* Transparent Soft UI Header & Filter Banner */}
       <div className="relative overflow-hidden rounded-[2rem] bg-transparent hover:bg-white/5 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/12 p-6 sm:p-8 shadow-[14px_14px_28px_rgba(15,23,42,0.13),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)] transition-all duration-300">
         <div className="relative z-10 flex flex-col lg:flex-row lg:justify-between lg:items-center gap-5">
           <div>
@@ -102,7 +111,6 @@ export default function AdminServicesPage() {
             </p>
           </div>
 
-          {/* Transparent Soft UI Filter Tabs */}
           <div className="flex gap-1.5 bg-white/10 backdrop-blur-[1px] p-1.5 rounded-2xl border border-white/90 ring-1 ring-slate-900/10 shadow-[6px_6px_14px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)] overflow-x-auto self-start lg:self-center">
             {filterTabs.map((s) => {
               const isActive = filter === s;
@@ -110,7 +118,10 @@ export default function AdminServicesPage() {
                 <button
                   key={s}
                   type="button"
-                  onClick={() => setFilter(s)}
+                  onClick={() => {
+                    setFilter(s);
+                    setCurrentPage(1);
+                  }}
                   className={`px-4 py-2 rounded-xl text-xs font-extrabold capitalize whitespace-nowrap transition-all cursor-pointer ${
                     isActive
                       ? "bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white shadow-[4px_4px_10px_rgba(255,87,34,0.3)]"
@@ -125,8 +136,7 @@ export default function AdminServicesPage() {
         </div>
       </div>
 
-      {/* Transparent Soft UI Table Card */}
-      <div className="relative overflow-hidden bg-transparent backdrop-blur-[1px] rounded-[2rem] border border-white/85 ring-1 ring-slate-900/12 shadow-[14px_14px_30px_rgba(15,23,42,0.14),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)]">
+      <div className="relative overflow-hidden bg-transparent backdrop-blur-[1px] rounded-[2rem] border border-white/85 ring-1 ring-slate-900/12 p-2 sm:p-4 shadow-[14px_14px_30px_rgba(15,23,42,0.14),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)]">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -156,7 +166,7 @@ export default function AdminServicesPage() {
             </thead>
 
             <tbody className="divide-y divide-white/65">
-              {filteredServices.length === 0 ? (
+              {paginatedServices.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-6 py-16 text-center">
                     <div className="inline-flex flex-col items-center justify-center p-6 rounded-[1.75rem] bg-white/10 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/12 shadow-[10px_10px_22px_rgba(15,23,42,0.1),-8px_-8px_18px_rgba(255,255,255,0.92)]">
@@ -173,7 +183,7 @@ export default function AdminServicesPage() {
                   </td>
                 </tr>
               ) : (
-                filteredServices.map((service) => {
+                paginatedServices.map((service) => {
                   const statusValue = service.approvalStatus || "pending";
                   const isBusy = updatingId === service._id;
                   const statusBadgeStyle =
@@ -188,7 +198,7 @@ export default function AdminServicesPage() {
                       key={service._id}
                       className="group hover:bg-white/10 transition-all duration-200"
                     >
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-3.5">
                         <div className="flex items-center gap-3.5">
                           <div className="relative w-12 h-12 rounded-2xl overflow-hidden shrink-0 border border-white/90 ring-1 ring-slate-900/12 bg-white/10 shadow-[5px_5px_12px_rgba(15,23,42,0.1),-4px_-4px_10px_rgba(255,255,255,0.92)]">
                             <Image
@@ -205,11 +215,11 @@ export default function AdminServicesPage() {
                         </div>
                       </td>
 
-                      <td className="px-6 py-4 text-sm font-semibold text-gray-800 whitespace-nowrap">
+                      <td className="px-6 py-3.5 text-sm font-semibold text-gray-800 whitespace-nowrap">
                         {service.technicianName || "Technician"}
                       </td>
 
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-3.5 whitespace-nowrap">
                         <span
                           className={`inline-block px-3.5 py-1 text-xs font-extrabold rounded-full capitalize bg-white/15 backdrop-blur-[1px] border border-white/90 ring-1 shadow-[3px_3px_8px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)] ${statusBadgeStyle}`}
                         >
@@ -217,7 +227,7 @@ export default function AdminServicesPage() {
                         </span>
                       </td>
 
-                      <td className="px-6 py-4 text-right whitespace-nowrap">
+                      <td className="px-6 py-3.5 text-right whitespace-nowrap">
                         {statusValue === "pending" && (
                           <div className="inline-flex items-center justify-end gap-2">
                             <button
@@ -251,6 +261,16 @@ export default function AdminServicesPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        <div className="px-4 pb-2">
+          <Pagination
+            currentPage={safePage}
+            totalItems={filteredServices.length}
+            pageSize={PAGE_SIZE}
+            onPageChange={setCurrentPage}
+            itemLabel="services"
+          />
         </div>
       </div>
     </div>

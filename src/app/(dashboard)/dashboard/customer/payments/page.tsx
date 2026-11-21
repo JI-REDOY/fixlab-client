@@ -2,6 +2,12 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { fetchApi } from "@/lib/api";
+import { toast } from "@/components/ui/CustomToast";
+import Pagination from "@/components/ui/Pagination";
+import ThermalReceiptModal, {
+  ReceiptPayload,
+} from "@/components/receipt/ThermalReceiptModal";
+import { transactionToReceipt } from "@/components/receipt/receiptMapper";
 import {
   Loader2,
   CreditCard,
@@ -10,22 +16,40 @@ import {
   Calendar,
   Wrench,
   UserCheck,
+  Printer,
 } from "lucide-react";
+
+const PAGE_SIZE = 6;
 
 interface PaymentItem {
   _id?: string;
   id?: string;
+  bookingId?: string;
   transactionId?: string;
+  stripePaymentIntentId?: string;
   serviceTitle?: string;
   technicianName?: string;
+  technicianEmail?: string;
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  address?: string;
   amount?: number | string;
+  currency?: string;
+  paymentStatus?: string;
+  cardBrand?: string;
+  cardLast4?: string;
   paidAt?: string;
   createdAt?: string;
 }
 
 export default function PaymentHistoryPage() {
   const [payments, setPayments] = useState<PaymentItem[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [activeReceipt, setActiveReceipt] = useState<ReceiptPayload | null>(
+    null
+  );
 
   useEffect(() => {
     let active = true;
@@ -42,9 +66,12 @@ export default function PaymentHistoryPage() {
           : [];
         setPayments(list);
       })
-      .catch((err) => {
+      .catch((err: any) => {
         console.error(err);
-        if (active) setPayments([]);
+        if (active) {
+          toast.error(err?.message || "Failed to load payment history");
+          setPayments([]);
+        }
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -62,6 +89,13 @@ export default function PaymentHistoryPage() {
     }, 0);
   }, [payments]);
 
+  const totalPages = Math.max(1, Math.ceil(payments.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedPayments = payments.slice(
+    (safePage - 1) * PAGE_SIZE,
+    safePage * PAGE_SIZE
+  );
+
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return "—";
     const parsed = new Date(dateStr);
@@ -78,7 +112,6 @@ export default function PaymentHistoryPage() {
 
   return (
     <div className="space-y-7 relative">
-      {/* Header Banner */}
       <div className="relative overflow-hidden rounded-[2rem] bg-white/15 backdrop-blur-md border border-white/55 p-6 sm:p-8 shadow-[0_10px_28px_rgba(0,0,0,0.03),inset_0_1px_0_rgba(255,255,255,0.65)]">
         <div className="absolute -right-12 -top-12 w-48 h-48 rounded-full bg-[#ff5722]/12 blur-2xl pointer-events-none" />
 
@@ -117,8 +150,7 @@ export default function PaymentHistoryPage() {
         </div>
       </div>
 
-      {/* Glass Table Container */}
-      <div className="relative overflow-hidden bg-white/15 backdrop-blur-md rounded-[2rem] border border-white/55 shadow-[0_10px_28px_rgba(0,0,0,0.03),inset_0_1px_0_rgba(255,255,255,0.65)]">
+      <div className="relative overflow-hidden bg-white/15 backdrop-blur-md rounded-[2rem] border border-white/55 p-2 sm:p-4 shadow-[0_10px_28px_rgba(0,0,0,0.03),inset_0_1px_0_rgba(255,255,255,0.65)]">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -153,13 +185,16 @@ export default function PaymentHistoryPage() {
                     Date
                   </span>
                 </th>
+                <th className="px-6 py-4 text-[11px] font-extrabold text-gray-700 uppercase tracking-wider text-right">
+                  Receipt
+                </th>
               </tr>
             </thead>
 
             <tbody className="divide-y divide-white/40">
-              {payments.length === 0 ? (
+              {paginatedPayments.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-16 text-center">
+                  <td colSpan={6} className="px-6 py-16 text-center">
                     <div className="inline-flex flex-col items-center justify-center">
                       <div className="w-14 h-14 rounded-2xl bg-[#ff5722]/10 border border-[#ff5722]/20 flex items-center justify-center text-[#ff5722] mb-3">
                         <CreditCard size={24} />
@@ -174,8 +209,9 @@ export default function PaymentHistoryPage() {
                   </td>
                 </tr>
               ) : (
-                payments.map((p, idx) => {
-                  const rowKey = p._id || p.id || p.transactionId || idx;
+                paginatedPayments.map((p, idx) => {
+                  const txId = p.transactionId || p.stripePaymentIntentId || "";
+                  const rowKey = p._id || p.id || txId || idx;
                   const numericAmount = Number(p.amount ?? 0);
                   const displayAmount = Number.isNaN(numericAmount)
                     ? p.amount || "0.00"
@@ -186,31 +222,44 @@ export default function PaymentHistoryPage() {
                       key={rowKey}
                       className="group hover:bg-white/25 transition-colors duration-200"
                     >
-                      <td className="px-6 py-4 text-xs sm:text-sm font-mono font-semibold text-gray-700 truncate max-w-[150px]">
+                      <td className="px-6 py-3.5 text-xs sm:text-sm font-mono font-semibold text-gray-700 truncate max-w-[150px]">
                         <span
-                          title={p.transactionId || ""}
+                          title={txId}
                           className="px-2.5 py-1 rounded-lg bg-white/30 border border-white/50 inline-block max-w-full truncate group-hover:border-[#ff5722]/35 transition-colors"
                         >
-                          {p.transactionId || "—"}
+                          {txId || "—"}
                         </span>
                       </td>
 
-                      <td className="px-6 py-4 text-sm font-extrabold text-gray-900 group-hover:text-[#ff5722] transition-colors">
+                      <td className="px-6 py-3.5 text-sm font-extrabold text-gray-900 group-hover:text-[#ff5722] transition-colors">
                         {p.serviceTitle || "Repair Service"}
                       </td>
 
-                      <td className="px-6 py-4 text-sm font-semibold text-gray-700">
+                      <td className="px-6 py-3.5 text-sm font-semibold text-gray-700">
                         {p.technicianName || "Verified Tech"}
                       </td>
 
-                      <td className="px-6 py-4 text-sm font-extrabold">
+                      <td className="px-6 py-3.5 text-sm font-extrabold">
                         <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#ff5722]/12 border border-[#ff5722]/25 text-[#ff5722]">
                           ${displayAmount}
                         </span>
                       </td>
 
-                      <td className="px-6 py-4 text-sm font-semibold text-gray-700 whitespace-nowrap">
+                      <td className="px-6 py-3.5 text-sm font-semibold text-gray-700 whitespace-nowrap">
                         {formatDate(p.paidAt || p.createdAt)}
+                      </td>
+
+                      <td className="px-6 py-3.5 text-right whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setActiveReceipt(transactionToReceipt(p))
+                          }
+                          className="px-3 py-1.5 text-xs font-extrabold text-gray-900 bg-white/75 hover:bg-white border border-white/80 ring-1 ring-slate-900/10 rounded-full inline-flex items-center gap-1 transition-all cursor-pointer"
+                        >
+                          <Printer size={13} className="text-[#ff5722]" />
+                          <span>Receipt</span>
+                        </button>
                       </td>
                     </tr>
                   );
@@ -219,7 +268,22 @@ export default function PaymentHistoryPage() {
             </tbody>
           </table>
         </div>
+
+        <div className="px-4 pb-2">
+          <Pagination
+            currentPage={safePage}
+            totalItems={payments.length}
+            pageSize={PAGE_SIZE}
+            onPageChange={setCurrentPage}
+            itemLabel="payments"
+          />
+        </div>
       </div>
+
+      <ThermalReceiptModal
+        receipt={activeReceipt}
+        onClose={() => setActiveReceipt(null)}
+      />
     </div>
   );
 }

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { authClient } from "@/lib/auth-client";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "@/components/ui/CustomToast";
 import Link from "next/link";
 import { Input } from "@/components/ui/Input";
@@ -10,12 +10,39 @@ import Image from "next/image";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 
-export default function SignInPage() {
+function getSafeRedirect(raw: string | null): string | null {
+  if (!raw) return null;
+  if (raw.startsWith("/") && !raw.startsWith("//")) {
+    return raw;
+  }
+  return null;
+}
+
+function SignInForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTarget = getSafeRedirect(searchParams.get("redirect"));
+  const { data: session, isPending: isSessionPending } = authClient.useSession();
+
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isSessionPending && session?.user) {
+      const role = (session.user as any)?.role || "customer";
+      router.replace(redirectTarget || `/dashboard/${role}`);
+    }
+  }, [isSessionPending, session, redirectTarget, router]);
+
+  if (isSessionPending || session?.user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center pt-32 text-sm font-bold text-gray-600">
+        Redirecting...
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,33 +78,44 @@ export default function SignInPage() {
 
       if (tokenData.token) {
         localStorage.setItem("fixlab_token", tokenData.token);
-        toast.success("Welcome back!");
-        const role = data?.user?.role || "customer";
-        router.push(`/dashboard/${role}`);
+
+        const resolvedName =
+          data?.user?.name ||
+          tokenData?.user?.name ||
+          formData.email.split("@")[0];
+
+        toast.welcome(resolvedName, {
+          persistAcrossRedirect: true,
+        });
+
+        const role =
+          data?.user?.role || tokenData?.user?.role || "customer";
+        router.push(redirectTarget || `/dashboard/${role}`);
       } else {
         throw new Error("No token received");
       }
     } catch (err: any) {
       toast.error(err.message || "Signed in, but failed to fetch session token.");
-      setLoading(false);
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
+    setGoogleLoading(true);
     try {
-      // ১. Google-এ রিডাইরেক্ট হওয়ার আগেই টোস্ট সেভ করে রাখবে
-      toast.success("Welcome back! Signed in with Google.", {
+      toast.info("Redirecting to Google sign-in...", {
         persistAcrossRedirect: true,
       });
 
+      const callbackURL = redirectTarget || "/dashboard";
       await authClient.signIn.social({
         provider: "google",
-        callbackURL: "/dashboard",
+        callbackURL,
       });
     } catch (error: any) {
       toast.error(error?.message || "Google sign-in failed");
+      setGoogleLoading(false);
     }
   };
 
@@ -170,7 +208,11 @@ export default function SignInPage() {
         <p className="text-center text-sm font-medium text-gray-700 mt-8">
           Don&apos;t have an account?{" "}
           <Link
-            href="/sign-up"
+            href={
+              redirectTarget
+                ? `/sign-up?redirect=${encodeURIComponent(redirectTarget)}`
+                : "/sign-up"
+            }
             className="text-[#ff5722] font-bold hover:underline transition-all"
           >
             Sign Up
@@ -178,5 +220,19 @@ export default function SignInPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center pt-32 text-sm font-bold text-gray-600">
+          Loading...
+        </div>
+      }
+    >
+      <SignInForm />
+    </Suspense>
   );
 }

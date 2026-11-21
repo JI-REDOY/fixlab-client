@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "@/components/ui/CustomToast";
 import { fetchApi } from "@/lib/api";
+import Pagination from "@/components/ui/Pagination";
 import {
   Loader2,
   Sparkles,
@@ -11,6 +12,8 @@ import {
   ShieldCheck,
   UserCog,
 } from "lucide-react";
+
+const PAGE_SIZE = 6;
 
 interface AdminUserItem {
   _id: string;
@@ -22,6 +25,7 @@ interface AdminUserItem {
 
 export default function ManageUsersPage() {
   const [users, setUsers] = useState<AdminUserItem[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
@@ -67,6 +71,13 @@ export default function ManageUsersPage() {
     }
   };
 
+  const totalPages = Math.max(1, Math.ceil(users.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedUsers = users.slice(
+    (safePage - 1) * PAGE_SIZE,
+    safePage * PAGE_SIZE
+  );
+
   if (loading) {
     return (
       <div className="flex justify-center py-24">
@@ -77,7 +88,6 @@ export default function ManageUsersPage() {
 
   return (
     <div className="space-y-8 relative z-10">
-      {/* Transparent Soft UI Header Banner */}
       <div className="relative overflow-hidden rounded-[2rem] bg-transparent hover:bg-white/5 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/10 p-6 sm:p-8 shadow-[14px_14px_28px_rgba(15,23,42,0.13),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)] transition-all duration-300">
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -103,8 +113,7 @@ export default function ManageUsersPage() {
         </div>
       </div>
 
-      {/* Transparent Soft UI Table Card */}
-      <div className="relative overflow-hidden bg-transparent backdrop-blur-[1px] rounded-[2rem] border border-white/85 ring-1 ring-slate-900/10 shadow-[14px_14px_30px_rgba(15,23,42,0.14),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)]">
+      <div className="relative overflow-hidden bg-transparent backdrop-blur-[1px] rounded-[2rem] border border-white/85 ring-1 ring-slate-900/10 p-2 sm:p-4 shadow-[14px_14px_30px_rgba(15,23,42,0.14),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)]">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -137,7 +146,7 @@ export default function ManageUsersPage() {
             </thead>
 
             <tbody className="divide-y divide-white/65">
-              {users.length === 0 ? (
+              {paginatedUsers.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-6 py-16 text-center">
                     <div className="inline-flex flex-col items-center justify-center p-6 rounded-[1.75rem] bg-white/10 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/10 shadow-[10px_10px_22px_rgba(15,23,42,0.1),-8px_-8px_18px_rgba(255,255,255,0.92)]">
@@ -154,7 +163,7 @@ export default function ManageUsersPage() {
                   </td>
                 </tr>
               ) : (
-                users.map((user) => {
+                paginatedUsers.map((user) => {
                   const displayName = user.name || "User";
                   const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(
                     displayName
@@ -172,7 +181,7 @@ export default function ManageUsersPage() {
                       key={user._id}
                       className="group hover:bg-white/10 transition-all duration-200"
                     >
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-3.5">
                         <div className="flex items-center gap-3.5">
                           <img
                             src={user.image || fallbackAvatar}
@@ -185,11 +194,11 @@ export default function ManageUsersPage() {
                         </div>
                       </td>
 
-                      <td className="px-6 py-4 text-sm font-semibold text-gray-800 whitespace-nowrap">
+                      <td className="px-6 py-3.5 text-sm font-semibold text-gray-800 whitespace-nowrap">
                         {user.email || "—"}
                       </td>
 
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-3.5 whitespace-nowrap">
                         <span
                           className={`w-28 inline-flex items-center justify-center py-1 text-xs font-extrabold rounded-full capitalize bg-white/40 backdrop-blur-[1px] border border-white/90 ring-1 shadow-[3px_3px_8px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)] ${roleBadgeStyle}`}
                         >
@@ -197,7 +206,7 @@ export default function ManageUsersPage() {
                         </span>
                       </td>
 
-                      <td className="px-6 py-4 text-right whitespace-nowrap">
+                      <td className="px-6 py-3.5 text-right whitespace-nowrap">
                         <select
                           disabled={
                             user.role === "admin" || updatingId === user._id
@@ -219,6 +228,16 @@ export default function ManageUsersPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        <div className="px-4 pb-2">
+          <Pagination
+            currentPage={safePage}
+            totalItems={users.length}
+            pageSize={PAGE_SIZE}
+            onPageChange={setCurrentPage}
+            itemLabel="users"
+          />
         </div>
       </div>
     </div>

@@ -35,8 +35,11 @@ interface RoleRequestItem {
 }
 
 export default function ProfilePage() {
-  const { data: session, isPending } = authClient.useSession();
+  const sessionHook = authClient.useSession();
+  const { data: session, isPending } = sessionHook;
+
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [dbRole, setDbRole] = useState<string | null>(null);
 
@@ -66,14 +69,14 @@ export default function ProfilePage() {
     if (session?.user) {
       const userRole = (session.user as any).role || "customer";
       setDbRole((prev) => prev || userRole);
-      setFormData({
-        name: session.user.name || "",
-        phone: (session.user as any).phone || "",
-        area: (session.user as any).area || "",
-        bio: (session.user as any).bio || "",
-        image: session.user.image || "",
-      });
-      setImagePreview(session.user.image || null);
+      setFormData((prev) => ({
+        name: session.user.name || prev.name || "",
+        phone: (session.user as any).phone ?? prev.phone ?? "",
+        area: (session.user as any).area ?? prev.area ?? "",
+        bio: (session.user as any).bio ?? prev.bio ?? "",
+        image: prev.image || session.user.image || "",
+      }));
+      setImagePreview((prev) => prev || session.user.image || null);
       setTargetRole(userRole === "technician" ? "customer" : "technician");
     }
   }, [session]);
@@ -105,28 +108,64 @@ export default function ProfilePage() {
 
   if (!session) return null;
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setImagePreview(reader.result as string);
-      reader.readAsDataURL(file);
-      setFormData({
-        ...formData,
-        image:
-          "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?q=80&w=200",
-      });
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (typeof reader.result === "string") {
+        setImagePreview(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+
+    setUploading(true);
+    const imgData = new FormData();
+    imgData.append("image", file);
+
+    try {
+      const res = await fetch(
+        `https://api.imgbb.com/1/upload?key=${process.env.NEXT_PUBLIC_IMGBB_API_KEY}`,
+        {
+          method: "POST",
+          body: imgData,
+        }
+      );
+      const data = await res.json();
+
+      if (data?.success && data?.data?.url) {
+        const uploadedUrl: string = data.data.url;
+        setFormData((prev) => ({ ...prev, image: uploadedUrl }));
+        setImagePreview(uploadedUrl);
+        toast.success("Photo uploaded! Click Save Changes to apply.");
+      } else {
+        setImagePreview(formData.image || session.user.image || null);
+        toast.error("Image upload failed");
+      }
+    } catch {
+      setImagePreview(formData.image || session.user.image || null);
+      toast.error("Image upload failed");
+    } finally {
+      setUploading(false);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (uploading) {
+      toast.error("Please wait for the photo upload to finish.");
+      return;
+    }
+
     setLoading(true);
 
     try {
+      const imageToSave = formData.image || session.user.image || "";
+
       const { error } = await authClient.updateUser({
-        name: formData.name,
-        image: formData.image,
+        name: formData.name.trim(),
+        image: imageToSave,
         phone: formData.phone,
         area: formData.area,
         bio: formData.bio,
@@ -135,6 +174,9 @@ export default function ProfilePage() {
       if (error) {
         toast.error(error.message || "Failed to update profile");
       } else {
+        if (typeof sessionHook.refetch === "function") {
+          await sessionHook.refetch();
+        }
         toast.success("Profile updated successfully!");
       }
     } catch {
@@ -230,6 +272,11 @@ export default function ProfilePage() {
                   alt="Profile"
                   className="w-full h-full object-cover"
                 />
+                {uploading && (
+                  <div className="absolute inset-0 bg-slate-900/45 flex items-center justify-center">
+                    <Loader2 className="animate-spin text-white" size={24} />
+                  </div>
+                )}
               </div>
 
               <div className="text-center sm:text-left">
@@ -242,11 +289,12 @@ export default function ProfilePage() {
                 <label className="inline-flex items-center gap-2 px-4 py-2 bg-white/15 hover:bg-white/25 backdrop-blur-[1px] border border-white/90 ring-1 ring-[#ff5722]/25 rounded-full cursor-pointer shadow-[5px_5px_12px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)] transition-all">
                   <UploadCloud size={16} className="text-[#ff5722]" />
                   <span className="text-xs font-extrabold text-gray-900">
-                    Upload New Photo
+                    {uploading ? "Uploading..." : "Upload New Photo"}
                   </span>
                   <input
                     type="file"
                     accept="image/*"
+                    disabled={uploading}
                     onChange={handleImageUpload}
                     className="hidden"
                   />
@@ -384,7 +432,7 @@ export default function ProfilePage() {
           <div className="pt-4 border-t border-white/75 flex justify-end">
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || uploading}
               className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] hover:from-[#e64a19] hover:to-[#ff5722] text-white text-sm font-extrabold rounded-full transition-all shadow-[6px_6px_16px_rgba(255,87,34,0.34),-4px_-4px_10px_rgba(255,255,255,0.85)] disabled:opacity-65 cursor-pointer"
             >
               {loading ? (

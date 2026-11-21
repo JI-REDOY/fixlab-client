@@ -10,6 +10,9 @@ import {
   UserCheck,
   ShieldCheck,
   UserCog,
+  Users,
+  CalendarCheck,
+  Receipt,
 } from "lucide-react";
 
 export type UserRole = "customer" | "technician" | "admin";
@@ -70,6 +73,11 @@ export const ROLE_NAV_ITEMS: Record<UserRole, NavItem[]> = {
       icon: ClipboardList,
     },
     {
+      label: "Transactions",
+      href: "/dashboard/technician/transactions",
+      icon: Receipt,
+    },
+    {
       label: "Update Profile",
       href: "/dashboard/profile",
       icon: UserCog,
@@ -82,6 +90,11 @@ export const ROLE_NAV_ITEMS: Record<UserRole, NavItem[]> = {
       icon: LayoutDashboard,
     },
     {
+      label: "Manage Users",
+      href: "/dashboard/admin/users",
+      icon: Users,
+    },
+    {
       label: "Role Requests",
       href: "/dashboard/admin/role-requests",
       icon: UserCheck,
@@ -90,6 +103,16 @@ export const ROLE_NAV_ITEMS: Record<UserRole, NavItem[]> = {
       label: "Manage Services",
       href: "/dashboard/admin/services",
       icon: ShieldCheck,
+    },
+    {
+      label: "All Bookings",
+      href: "/dashboard/admin/bookings",
+      icon: CalendarCheck,
+    },
+    {
+      label: "Transactions",
+      href: "/dashboard/admin/transactions",
+      icon: Receipt,
     },
     {
       label: "Update Profile",

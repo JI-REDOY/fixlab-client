@@ -13,7 +13,6 @@ export const auth = betterAuth({
     enabled: true,
     autoSignIn: true,
   },
-  // এখানে গুগল প্রোভাইডার যোগ করা হলো
   socialProviders: {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID as string,
@@ -22,11 +21,44 @@ export const auth = betterAuth({
   },
   user: {
     additionalFields: {
-      role: { type: "string", required: false, defaultValue: "customer" },
+      role: {
+        type: "string",
+        required: false,
+        defaultValue: "customer",
+        input: true,
+      },
+      roleConfirmed: {
+        type: "boolean",
+        required: false,
+        defaultValue: false,
+        input: true,
+      },
       phone: { type: "string", required: false },
       area: { type: "string", required: false },
       bio: { type: "string", required: false },
     },
   },
-  trustedOrigins: ["http://localhost:3000"],
+  databaseHooks: {
+    user: {
+      create: {
+        before: async (user) => {
+          const safeRole =
+            user.role === "technician" ? "technician" : "customer";
+          return {
+            data: {
+              ...user,
+              role: safeRole,
+              roleConfirmed: Boolean((user as any).roleConfirmed),
+            },
+          };
+        },
+      },
+    },
+  },
+  trustedOrigins: [
+    "http://localhost:3000",
+    ...(process.env.NEXT_PUBLIC_APP_URL
+      ? [process.env.NEXT_PUBLIC_APP_URL]
+      : []),
+  ],
 });

@@ -1,6 +1,11 @@
 "use client";
 
 import { toast } from "@/components/ui/CustomToast";
+import Pagination from "@/components/ui/Pagination";
+import ThermalReceiptModal, {
+  ReceiptPayload,
+} from "@/components/receipt/ThermalReceiptModal";
+import { bookingToReceipt } from "@/components/receipt/receiptMapper";
 import {
   Check,
   X,
@@ -13,27 +18,35 @@ import {
   Calendar,
   Activity,
   DollarSign,
+  Printer,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { fetchApi } from "@/lib/api";
 
+const PAGE_SIZE = 6;
 const filterTabs = ["all", "requested", "accepted", "in-progress", "completed"];
 
 interface RequestItem {
   _id: string;
   customerName?: string;
+  customerEmail?: string;
   customerPhone?: string;
   address?: string;
+  technicianName?: string;
+  technicianEmail?: string;
   serviceTitle?: string;
   problemDescription?: string;
   preferredDate?: string;
   status: string;
+  paymentStatus?: string;
   basePrice?: number | string;
+  finalAmount?: number | string;
 }
 
 export default function RequestsPage() {
   const [requests, setRequests] = useState<RequestItem[]>([]);
   const [filter, setFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -41,9 +54,12 @@ export default function RequestsPage() {
     null
   );
   const [finalAmount, setFinalAmount] = useState("");
+  const [activeReceipt, setActiveReceipt] = useState<ReceiptPayload | null>(
+    null
+  );
 
-  const fetchRequests = useCallback(() => {
-    setLoading(true);
+  const fetchRequests = useCallback((showSpinner = false) => {
+    if (showSpinner) setLoading(true);
     fetchApi("/api/bookings/technician")
       .then((data) => {
         const list = Array.isArray(data)
@@ -65,14 +81,35 @@ export default function RequestsPage() {
   }, []);
 
   useEffect(() => {
-    fetchRequests();
+    fetchRequests(true);
   }, [fetchRequests]);
+
+  useEffect(() => {
+    if (!modalOpen || updatingId) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setModalOpen(false);
+        setSelectedBooking(null);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [modalOpen, updatingId]);
 
   const updateStatus = async (
     id: string,
     newStatus: string,
     amount?: number
   ) => {
+    if (newStatus === "completed") {
+      const numericAmount = Number(amount);
+      if (Number.isNaN(numericAmount) || numericAmount <= 0) {
+        toast.error("Please enter a valid final amount greater than 0");
+        return;
+      }
+      amount = numericAmount;
+    }
+
     setUpdatingId(id);
     try {
       await fetchApi(`/api/bookings/${id}/status`, {
@@ -82,7 +119,7 @@ export default function RequestsPage() {
       toast.success(`Request ${newStatus}`);
       setModalOpen(false);
       setSelectedBooking(null);
-      fetchRequests();
+      fetchRequests(false);
     } catch (err: any) {
       toast.error(err?.message || "Could not update status");
     } finally {
@@ -92,7 +129,7 @@ export default function RequestsPage() {
 
   const openCompleteModal = (booking: RequestItem) => {
     setSelectedBooking(booking);
-    setFinalAmount((booking.basePrice ?? "").toString());
+    setFinalAmount((booking.finalAmount ?? booking.basePrice ?? "").toString());
     setModalOpen(true);
   };
 
@@ -100,6 +137,13 @@ export default function RequestsPage() {
     filter === "all"
       ? requests
       : requests.filter((r) => r.status === filter);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRequests.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedRequests = filteredRequests.slice(
+    (safePage - 1) * PAGE_SIZE,
+    safePage * PAGE_SIZE
+  );
 
   if (loading) {
     return (
@@ -111,7 +155,6 @@ export default function RequestsPage() {
 
   return (
     <div className="space-y-8 relative z-10">
-      {/* Transparent Soft UI Header & Filter Banner */}
       <div className="relative overflow-hidden rounded-[2rem] bg-transparent hover:bg-white/5 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/12 p-6 sm:p-8 shadow-[14px_14px_28px_rgba(15,23,42,0.13),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)] transition-all duration-300">
         <div className="relative z-10 flex flex-col lg:flex-row lg:justify-between lg:items-center gap-5">
           <div>
@@ -122,11 +165,10 @@ export default function RequestsPage() {
               Manage <span className="text-[#ff5722]">Requests</span>
             </h1>
             <p className="text-gray-700 text-sm font-medium mt-1">
-              Review and update job statuses for incoming requests.
+              Review incoming requests, inspect receipts, and update job statuses.
             </p>
           </div>
 
-          {/* Transparent Soft UI Filter Tabs */}
           <div className="flex gap-1.5 bg-white/10 backdrop-blur-[1px] p-1.5 rounded-2xl border border-white/90 ring-1 ring-slate-900/10 shadow-[6px_6px_14px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)] overflow-x-auto self-start lg:self-center">
             {filterTabs.map((s) => {
               const isActive = filter === s;
@@ -134,7 +176,10 @@ export default function RequestsPage() {
                 <button
                   key={s}
                   type="button"
-                  onClick={() => setFilter(s)}
+                  onClick={() => {
+                    setFilter(s);
+                    setCurrentPage(1);
+                  }}
                   className={`px-4 py-2 rounded-xl text-xs font-extrabold capitalize whitespace-nowrap transition-all cursor-pointer ${
                     isActive
                       ? "bg-gradient-to-r from-[#ff5722] to-[#ff6d3f] text-white shadow-[4px_4px_10px_rgba(255,87,34,0.3)]"
@@ -149,8 +194,7 @@ export default function RequestsPage() {
         </div>
       </div>
 
-      {/* Transparent Soft UI Table Card */}
-      <div className="relative overflow-hidden bg-transparent backdrop-blur-[1px] rounded-[2rem] border border-white/85 ring-1 ring-slate-900/12 shadow-[14px_14px_30px_rgba(15,23,42,0.14),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)]">
+      <div className="relative overflow-hidden bg-transparent backdrop-blur-[1px] rounded-[2rem] border border-white/85 ring-1 ring-slate-900/12 p-2 sm:p-4 shadow-[14px_14px_30px_rgba(15,23,42,0.14),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.85)]">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -186,7 +230,7 @@ export default function RequestsPage() {
             </thead>
 
             <tbody className="divide-y divide-white/65">
-              {filteredRequests.length === 0 ? (
+              {paginatedRequests.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-16 text-center">
                     <div className="inline-flex flex-col items-center justify-center p-6 rounded-[1.75rem] bg-white/10 backdrop-blur-[1px] border border-white/85 ring-1 ring-slate-900/12 shadow-[10px_10px_22px_rgba(15,23,42,0.1),-8px_-8px_18px_rgba(255,255,255,0.92)]">
@@ -203,11 +247,17 @@ export default function RequestsPage() {
                   </td>
                 </tr>
               ) : (
-                filteredRequests.map((req) => {
+                paginatedRequests.map((req) => {
                   const formattedDate = req.preferredDate
                     ? new Date(req.preferredDate).toLocaleDateString()
                     : "—";
                   const isBusy = updatingId === req._id;
+                  const canPrintReceipt = [
+                    "requested",
+                    "accepted",
+                    "in-progress",
+                    "completed",
+                  ].includes(req.status);
 
                   const badgeClass =
                     req.status === "requested"
@@ -225,7 +275,7 @@ export default function RequestsPage() {
                       key={req._id}
                       className="group hover:bg-white/10 transition-all duration-200"
                     >
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-3.5">
                         <p className="font-extrabold text-sm text-gray-900 group-hover:text-[#ff5722] transition-colors">
                           {req.customerName || "Customer"}
                         </p>
@@ -244,7 +294,7 @@ export default function RequestsPage() {
                         )}
                       </td>
 
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-3.5">
                         <p className="font-extrabold text-sm text-gray-900">
                           {req.serviceTitle || "Repair Service"}
                         </p>
@@ -258,11 +308,11 @@ export default function RequestsPage() {
                         )}
                       </td>
 
-                      <td className="px-6 py-4 text-sm font-semibold text-gray-800 whitespace-nowrap">
+                      <td className="px-6 py-3.5 text-sm font-semibold text-gray-800 whitespace-nowrap">
                         {formattedDate}
                       </td>
 
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-3.5 whitespace-nowrap">
                         <span
                           className={`inline-block px-3.5 py-1 text-xs font-extrabold rounded-full capitalize bg-white/15 backdrop-blur-[1px] border border-white/90 ring-1 shadow-[3px_3px_8px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)] ${badgeClass}`}
                         >
@@ -270,8 +320,21 @@ export default function RequestsPage() {
                         </span>
                       </td>
 
-                      <td className="px-6 py-4 text-right whitespace-nowrap">
+                      <td className="px-6 py-3.5 text-right whitespace-nowrap">
                         <div className="inline-flex items-center justify-end gap-2">
+                          {canPrintReceipt && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setActiveReceipt(bookingToReceipt(req))
+                              }
+                              className="px-3 py-1.5 text-xs font-extrabold text-gray-900 bg-white/25 hover:bg-white/45 backdrop-blur-[1px] border border-white/90 ring-1 ring-slate-900/15 rounded-full shadow-[4px_4px_10px_rgba(15,23,42,0.08),-3px_-3px_8px_rgba(255,255,255,0.92)] inline-flex items-center gap-1 transition-all cursor-pointer"
+                            >
+                              <Printer size={13} className="text-[#ff5722]" />
+                              <span>Receipt</span>
+                            </button>
+                          )}
+
                           {req.status === "requested" && (
                             <>
                               <button
@@ -324,6 +387,18 @@ export default function RequestsPage() {
                               <span>Complete</span>
                             </button>
                           )}
+
+                          {req.status === "completed" && (
+                            <span
+                              className={`px-3 py-1 rounded-full text-[11px] font-extrabold capitalize border ${
+                                req.paymentStatus === "paid"
+                                  ? "bg-emerald-500/15 text-emerald-800 border-emerald-500/30"
+                                  : "bg-amber-500/15 text-amber-800 border-amber-500/30"
+                              }`}
+                            >
+                              {req.paymentStatus || "unpaid"}
+                            </span>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -333,12 +408,37 @@ export default function RequestsPage() {
             </tbody>
           </table>
         </div>
+
+        <div className="px-4 pb-2">
+          <Pagination
+            currentPage={safePage}
+            totalItems={filteredRequests.length}
+            pageSize={PAGE_SIZE}
+            onPageChange={setCurrentPage}
+            itemLabel="requests"
+          />
+        </div>
       </div>
 
-      {/* Transparent Soft UI Complete Modal */}
+      <ThermalReceiptModal
+        receipt={activeReceipt}
+        onClose={() => setActiveReceipt(null)}
+      />
+
       {modalOpen && selectedBooking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[2px] p-4">
-          <div className="relative w-full max-w-sm rounded-[2rem] bg-white/25 backdrop-blur-[4px] border border-white/90 ring-1 ring-slate-900/15 p-6 sm:p-7 shadow-[16px_16px_34px_rgba(15,23,42,0.22),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.9)]">
+        <div
+          onClick={() => {
+            if (!updatingId) {
+              setModalOpen(false);
+              setSelectedBooking(null);
+            }
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[2px] p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-sm rounded-[2rem] bg-white/85 backdrop-blur-xl border border-white/90 ring-1 ring-slate-900/15 p-6 sm:p-7 shadow-[16px_16px_34px_rgba(15,23,42,0.22),-10px_-10px_24px_rgba(255,255,255,0.92),inset_0_1px_0_rgba(255,255,255,0.9)]"
+          >
             <h3 className="text-lg font-extrabold text-gray-900 mb-1">
               Enter <span className="text-[#ff5722]">Final Amount</span>
             </h3>
@@ -357,21 +457,23 @@ export default function RequestsPage() {
               />
               <input
                 type="number"
-                min="1"
+                min="0.01"
+                step="any"
                 value={finalAmount}
                 onChange={(e) => setFinalAmount(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 rounded-2xl bg-white/20 border border-white/90 ring-1 ring-slate-900/12 text-sm font-bold text-gray-900 outline-none focus:ring-2 focus:ring-[#ff5722]/35 focus:border-[#ff5722]/50 shadow-[inset_1px_1px_3px_rgba(15,23,42,0.07)]"
+                className="w-full pl-10 pr-4 py-3 rounded-2xl bg-white/60 border border-white/90 ring-1 ring-slate-900/12 text-sm font-bold text-gray-900 outline-none focus:ring-2 focus:ring-[#ff5722]/35 focus:border-[#ff5722]/50 shadow-[inset_1px_1px_3px_rgba(15,23,42,0.07)]"
               />
             </div>
 
             <div className="flex gap-2.5">
               <button
                 type="button"
+                disabled={Boolean(updatingId)}
                 onClick={() => {
                   setModalOpen(false);
                   setSelectedBooking(null);
                 }}
-                className="flex-1 py-3 bg-white/20 hover:bg-white/35 border border-white/90 text-gray-900 text-xs sm:text-sm font-extrabold rounded-full shadow-[5px_5px_12px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)] transition-all cursor-pointer"
+                className="flex-1 py-3 bg-white/70 hover:bg-white border border-white/90 text-gray-900 text-xs sm:text-sm font-extrabold rounded-full shadow-[5px_5px_12px_rgba(15,23,42,0.09),-4px_-4px_10px_rgba(255,255,255,0.92)] transition-all disabled:opacity-60 cursor-pointer"
               >
                 Cancel
               </button>
